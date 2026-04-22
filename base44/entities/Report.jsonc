@@ -1,0 +1,42 @@
+{
+  "name": "Report",
+  "type": "object",
+  "properties": {
+    "listing_id": {
+      "type": "string",
+      "description": "Reported listing ID"
+    },
+    "reporter_email": {
+      "type": "string",
+      "description": "Email of the reporter"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "spam",
+        "fraud",
+        "prohibited_item",
+        "misleading",
+        "other"
+      ],
+      "description": "Reason for reporting"
+    },
+    "details": {
+      "type": "string",
+      "description": "Additional details"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "reviewed",
+        "resolved"
+      ],
+      "default": "pending"
+    }
+  },
+  "required": [
+    "listing_id",
+    "reason"
+  ]
+}

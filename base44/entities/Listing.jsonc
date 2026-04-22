@@ -1,0 +1,159 @@
+{
+  "name": "Listing",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Title of the listing"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "electronics",
+        "vehicles",
+        "fashion",
+        "home",
+        "sports",
+        "collectibles",
+        "books",
+        "toys",
+        "garden",
+        "other"
+      ],
+      "description": "Item category"
+    },
+    "condition": {
+      "type": "string",
+      "enum": [
+        "new",
+        "like_new",
+        "good",
+        "fair",
+        "poor"
+      ],
+      "description": "Item condition"
+    },
+    "listing_type": {
+      "type": "string",
+      "enum": [
+        "fixed",
+        "auction"
+      ],
+      "description": "Fixed price or auction"
+    },
+    "price": {
+      "type": "number",
+      "description": "Fixed price or starting auction price in EUR"
+    },
+    "buy_now_price": {
+      "type": "number",
+      "description": "Optional instant buy price for auction listings"
+    },
+    "current_bid": {
+      "type": "number",
+      "description": "Current highest bid for auctions"
+    },
+    "bid_count": {
+      "type": "number",
+      "description": "Number of bids placed"
+    },
+    "min_bid_increment": {
+      "type": "number",
+      "description": "Minimum bid increment for auctions"
+    },
+    "auction_end": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the auction ends"
+    },
+    "highest_bidder": {
+      "type": "string",
+      "description": "Email of highest bidder"
+    },
+    "highest_bidder_name": {
+      "type": "string",
+      "description": "Name of highest bidder"
+    },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Image URLs"
+    },
+    "location": {
+      "type": "string",
+      "enum": [
+        "riga",
+        "daugavpils",
+        "liepaja",
+        "jelgava",
+        "jurmala",
+        "ventspils",
+        "rezekne",
+        "valmiera",
+        "jekabpils",
+        "ogre",
+        "tukums",
+        "cesis",
+        "other"
+      ],
+      "description": "City in Latvia"
+    },
+    "seller_email": {
+      "type": "string",
+      "description": "Email of the seller"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Name of the seller"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "sold_pending",
+        "in_progress",
+        "completed",
+        "sold",
+        "expired",
+        "cancelled",
+        "expired_no_winner"
+      ],
+      "default": "active",
+      "description": "Listing status"
+    },
+    "published": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether listing has been published and locked from editing"
+    },
+    "featured": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether listing is featured"
+    },
+    "views": {
+      "type": "number",
+      "default": 0,
+      "description": "View count"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Soft delete flag"
+    }
+  },
+  "required": [
+    "title",
+    "description",
+    "category",
+    "listing_type",
+    "price",
+    "location"
+  ]
+}

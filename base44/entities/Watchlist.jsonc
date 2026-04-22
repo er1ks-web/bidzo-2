@@ -1,0 +1,42 @@
+{
+  "name": "Watchlist",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user watching"
+    },
+    "listing_id": {
+      "type": "string",
+      "description": "ID of the watched listing"
+    },
+    "notify_new_bid": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notify on new bids"
+    },
+    "notify_ending_soon": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notify when ending soon"
+    },
+    "notify_auction_ended": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notify when auction ends"
+    },
+    "ending_soon_notified": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether ending-soon email was already sent"
+    },
+    "last_notified_bid": {
+      "type": "string",
+      "description": "ID of the last bid that triggered a notification (debounce)"
+    }
+  },
+  "required": [
+    "user_email",
+    "listing_id"
+  ]
+}

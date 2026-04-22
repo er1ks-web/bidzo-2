@@ -1,0 +1,119 @@
+{
+  "name": "AuctionTransaction",
+  "type": "object",
+  "properties": {
+    "listing_id": {
+      "type": "string",
+      "description": "Related listing ID"
+    },
+    "listing_title": {
+      "type": "string",
+      "description": "Cached listing title"
+    },
+    "listing_image": {
+      "type": "string",
+      "description": "Cached listing image URL"
+    },
+    "seller_email": {
+      "type": "string",
+      "description": "Seller email"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Seller name"
+    },
+    "buyer_email": {
+      "type": "string",
+      "description": "Winner/buyer email"
+    },
+    "buyer_name": {
+      "type": "string",
+      "description": "Winner/buyer name"
+    },
+    "winning_amount": {
+      "type": "number",
+      "description": "Winning bid amount in EUR"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "sold_pending",
+        "buyer_confirmed",
+        "seller_confirmed",
+        "in_progress",
+        "completed",
+        "cancelled"
+      ],
+      "default": "sold_pending",
+      "description": "Transaction status"
+    },
+    "buyer_confirmed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Buyer confirmed purchase"
+    },
+    "seller_confirmed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Seller confirmed sale"
+    },
+    "buyer_confirmed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When buyer confirmed"
+    },
+    "seller_confirmed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When seller confirmed"
+    },
+    "shipped": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether seller has marked item as shipped"
+    },
+    "shipped_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When seller marked item as shipped"
+    },
+    "shipping_info": {
+      "type": "string",
+      "description": "Optional shipping details or tracking code provided by seller"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When transaction was completed"
+    },
+    "reminder_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When reminder was last sent"
+    },
+    "conversation_id": {
+      "type": "string",
+      "description": "Linked message conversation ID"
+    },
+    "seller_feedback_outcome": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "unresponsive",
+        "backed_out"
+      ],
+      "description": "Seller's feedback on transaction outcome"
+    },
+    "feedback_submitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When seller submitted feedback"
+    }
+  },
+  "required": [
+    "listing_id",
+    "seller_email",
+    "buyer_email",
+    "winning_amount"
+  ]
+}

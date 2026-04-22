@@ -1,0 +1,38 @@
+{
+  "name": "NotificationPrefs",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user"
+    },
+    "outbid": {
+      "type": "boolean",
+      "default": true,
+      "description": "Email when outbid"
+    },
+    "auction_won": {
+      "type": "boolean",
+      "default": true,
+      "description": "Email when auction is won"
+    },
+    "auction_ended": {
+      "type": "boolean",
+      "default": true,
+      "description": "Email when seller's auction ends"
+    },
+    "transaction_chat": {
+      "type": "boolean",
+      "default": true,
+      "description": "Email when transaction chat is created"
+    },
+    "new_message": {
+      "type": "boolean",
+      "default": true,
+      "description": "Email when a new user-to-user message is received"
+    }
+  },
+  "required": [
+    "user_email"
+  ]
+}
