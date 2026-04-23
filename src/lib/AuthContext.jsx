@@ -69,6 +69,31 @@ export const AuthProvider = ({ children }) => {
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
+
+      // If we just returned from an OAuth provider (Google), exchange the code for a session.
+      // Without this, the app can redirect successfully but still appear logged out.
+      try {
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search)
+          const hasOAuthCode = !!params.get('code')
+          if (hasOAuthCode) {
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href)
+            if (exchangeError) console.log(exchangeError)
+
+            // Clean the URL (remove code param) to avoid re-processing on refresh
+            params.delete('code')
+            params.delete('state')
+            params.delete('error')
+            params.delete('error_code')
+            params.delete('error_description')
+            const next = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash}`
+            window.history.replaceState({}, document.title, next)
+          }
+        }
+      } catch (e) {
+        console.log(e)
+      }
+
       const { data, error } = await supabase.auth.getUser();
       if (error) console.log(error)
 
