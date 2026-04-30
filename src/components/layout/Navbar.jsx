@@ -16,6 +16,9 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  const logoUrl = 'https://xnadmnketxbquyrgqmcs.supabase.co/storage/v1/object/public/site-assets/bidzo-web-logo.svg'
+  const fallbackLogoUrl = 'https://media.base44.com/images/public/69c6629c38b4f05a07d13e7c/236f5728d_ChatGPT_Image_Mar_28__2026__06_25_47_PM-removebg-preview.png'
+
   const navLinks = [
     { to: '/', label: t('nav.home'), icon: Gavel },
     { to: '/browse', label: t('nav.browse'), icon: Search },
@@ -80,7 +83,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center shrink-0">
-            <img src="https://media.base44.com/images/public/69c6629c38b4f05a07d13e7c/236f5728d_ChatGPT_Image_Mar_28__2026__06_25_47_PM-removebg-preview.png"
+            <img src={logoUrl || fallbackLogoUrl}
 
             alt="Bidzo" className="h-9 w-auto object-contain"
 
