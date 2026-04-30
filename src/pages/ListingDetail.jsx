@@ -212,7 +212,7 @@ export default function ListingDetail() {
   });
 
   const sellerEmail = sellerProfile?.email || null
-  const sellerName = listing?.seller_name || sellerProfile?.full_name || null
+  const sellerName = listing?.seller_name || sellerProfile?.full_name || (sellerEmail ? sellerEmail.split('@')[0] : null)
   const { data: sellerRating } = useUserRating(sellerEmail);
   const hasEnded = isAuction && listing?.auction_end && new Date(listing.auction_end) < new Date();
   const isSoldPending = ['sold_pending', 'in_progress', 'completed'].includes(listing?.status);
@@ -507,7 +507,7 @@ export default function ListingDetail() {
               </div>
               <div>
                 <p className="font-semibold group-hover:text-accent transition-colors">
-                  {sellerProfile?.username || listing.seller_name || 'User'}
+                  {sellerProfile?.username || listing.seller_name || (sellerEmail ? sellerEmail.split('@')[0] : 'User')}
                 </p>
                 {sellerRating?.avg ? (
                   <StarRatingDisplay rating={sellerRating.avg} count={sellerRating.count} size="sm" />

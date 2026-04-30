@@ -90,7 +90,7 @@ export default function PublicProfile() {
     );
   }
 
-  const displayName = profile?.username || (sellerId.includes('@') ? sellerId.split('@')[0] : 'User');
+  const displayName = profile?.username || (profile?.email ? profile.email.split('@')[0] : null) || (sellerId.includes('@') ? sellerId.split('@')[0] : 'User');
   const memberSince = (profile?.created_at || profile?.created_date)
     ? format(new Date(profile.created_at || profile.created_date), 'MMMM yyyy')
     : null;
