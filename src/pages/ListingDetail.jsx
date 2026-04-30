@@ -99,9 +99,37 @@ export default function ListingDetail() {
         .from('bids')
         .select('*')
         .eq('listing_id', listingId)
+        .order('amount', { ascending: false })
+        .order('created_at', { ascending: false })
 
       if (error) console.log(error)
-      return Array.isArray(data) ? data : []
+      const rows = Array.isArray(data) ? data : []
+
+      try {
+        const bidderIds = Array.from(new Set(rows.map(r => r?.bidder_id).filter(Boolean)))
+        if (!bidderIds.length) return rows
+
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, username, email')
+          .in('id', bidderIds)
+
+        if (profilesError) console.log(profilesError)
+
+        const byId = new Map((Array.isArray(profiles) ? profiles : []).map(p => [p.id, p]))
+        return rows.map((b) => {
+          const p = byId.get(b.bidder_id)
+          const display = p?.username || (p?.email ? p.email.split('@')[0] : null)
+          return {
+            ...b,
+            bidder_name: display || b.bidder_name,
+            bidder_username: display,
+          }
+        })
+      } catch (e) {
+        console.log(e)
+        return rows
+      }
     },
     enabled: !!listingId && isValidUuid,
   });
@@ -113,29 +141,34 @@ export default function ListingDetail() {
       .channel(`listing-${listingId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'listings', filter: `id=eq.${listingId}` },
+        { event: 'UPDATE', schema: 'public', table: 'listings', filter: `id=eq.${listingId}` },
         () => {
           queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') console.log('listing channel error')
+      });
 
     const bidsChannel = supabase
       .channel(`bids-${listingId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'bids', filter: `listing_id=eq.${listingId}` },
+        { event: 'INSERT', schema: 'public', table: 'bids', filter: `listing_id=eq.${listingId}` },
         () => {
           queryClient.invalidateQueries({ queryKey: ['bids', listingId] });
+          queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') console.log('bids channel error')
+      });
 
     return () => {
       supabase.removeChannel(listingChannel)
       supabase.removeChannel(bidsChannel)
     };
-  }, [listingId]);
+  }, [listingId, isValidUuid, queryClient]);
 
   // Inject OG meta tags for social preview
   useEffect(() => {
@@ -288,7 +321,7 @@ export default function ListingDetail() {
           {/* Bid History for auctions */}
           {isAuction && (
             <div className="mt-4 sm:mt-6 bg-card rounded-xl border p-4 sm:p-6">
-              <BidHistory bids={bids} currentUserEmail={user?.email} />
+              <BidHistory bids={bids} currentUserEmail={user?.email} currentUserId={user?.id} />
             </div>
           )}
         </div>

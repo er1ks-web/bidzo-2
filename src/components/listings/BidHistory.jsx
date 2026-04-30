@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { User, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function BidHistory({ bids, currentUserEmail }) {
+export default function BidHistory({ bids, currentUserEmail, currentUserId }) {
   const { t } = useI18n();
 
   if (!bids?.length) {
@@ -17,6 +17,8 @@ export default function BidHistory({ bids, currentUserEmail }) {
   // Find the latest bid by the current user
   const userLatestBidId = currentUserEmail
     ? bids.find(b => b.bidder_email === currentUserEmail)?.id
+    : currentUserId
+    ? bids.find(b => b.bidder_id === currentUserId)?.id
     : null;
 
   return (
@@ -31,6 +33,10 @@ export default function BidHistory({ bids, currentUserEmail }) {
         {bids.map((bid, i) => {
           const isTop = i === 0;
           const isUserLatest = bid.id === userLatestBidId;
+
+          const ts = bid.created_date || bid.created_at || bid.inserted_at || null
+          const dateObj = ts ? new Date(ts) : null
+          const hasValidDate = dateObj && !Number.isNaN(dateObj.getTime())
 
           return (
             <motion.div
@@ -53,11 +59,11 @@ export default function BidHistory({ bids, currentUserEmail }) {
                 </div>
                 <div>
                   <p className={`font-medium text-sm ${isUserLatest ? 'text-accent' : ''}`}>
-                    {bid.bidder_name || 'Anonymous'}
+                    {bid.bidder_name || (bid.bidder_id ? `User ${String(bid.bidder_id).slice(0, 6)}` : 'Anonymous')}
                     {isUserLatest && <span className="ml-2 text-[10px] font-semibold bg-accent/20 text-accent px-1.5 py-0.5 rounded-full">You</span>}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(bid.created_date), 'MMM d, HH:mm')}
+                    {hasValidDate ? format(dateObj, 'MMM d, HH:mm') : ''}
                   </p>
                 </div>
               </div>

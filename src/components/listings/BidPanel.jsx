@@ -25,10 +25,15 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
     if (!user) return;
     ;(async () => {
       try {
+        const { data: authData, error: authError } = await supabase.auth.getUser()
+        if (authError) console.log(authError)
+        const authUser = authData?.user
+        if (!authUser?.id) return
+
         const { data, error } = await supabase
           .from('buyer_trust')
           .select('*')
-          .eq('user_email', user.email)
+          .eq('user_id', authUser.id)
           .limit(1)
 
         if (error) console.log(error)
@@ -122,14 +127,17 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
   };
 
   const handleFirstBidConfirm = async () => {
-    if (!user?.email) return
+    const { data: authData, error: authError } = await supabase.auth.getUser()
+    if (authError) console.log(authError)
+    const authUser = authData?.user
+    if (!authUser?.id) return
 
     try {
       if (!buyerTrust) {
         const { data, error } = await supabase
           .from('buyer_trust')
           .insert({
-            user_email: user.email,
+            user_id: authUser.id,
             first_bid_acknowledged: true,
           })
           .select('*')
