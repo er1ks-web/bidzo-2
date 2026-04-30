@@ -4,8 +4,9 @@ import { Search, Plus, MessageSquare, User, Gavel, Menu, Globe, Flame, Heart, Lo
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/supabase'
 
 export default function Navbar() {
   const { t, lang, setLang } = useI18n();
@@ -13,6 +14,7 @@ export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const navLinks = [
     { to: '/', label: t('nav.home'), icon: Gavel },
@@ -37,6 +39,40 @@ export default function Navbar() {
       window.location.href = `/browse?q=${encodeURIComponent(searchQuery.trim())}`;
     }
   };
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) {
+      setUnreadCount(0)
+      return;
+    }
+
+    let cancelled = false
+
+    const fetchUnread = async () => {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('recipient_id', user.id)
+        .eq('is_read', false)
+
+      if (error) console.log(error)
+      if (!cancelled) setUnreadCount(typeof count === 'number' ? count : 0)
+    }
+
+    fetchUnread().catch(() => {})
+
+    const chan = supabase
+      .channel(`navbar-unread-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `recipient_id=eq.${user.id}` }, () => {
+        fetchUnread().catch(() => {})
+      })
+      .subscribe()
+
+    return () => {
+      cancelled = true
+      supabase.removeChannel(chan)
+    }
+  }, [isAuthenticated, user?.id]);
 
   return (
     <nav className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
@@ -79,6 +115,9 @@ export default function Navbar() {
                 className="gap-2">
                   <span className="relative">
                     <Icon className="w-4 h-4" />
+                    {to === '/messages' && unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-accent" />
+                    )}
                   </span>
                   <span className="hidden lg:inline">{label}</span>
                 </Button>
@@ -135,6 +174,9 @@ export default function Navbar() {
                       className="w-full justify-start gap-3">
                         <span className="relative">
                           <Icon className="w-5 h-5" />
+                          {to === '/messages' && unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-accent" />
+                          )}
                         </span>
                         {label}
                       </Button>
