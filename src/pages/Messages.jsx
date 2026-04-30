@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -210,7 +211,7 @@ export default function Messages() {
       supabase.removeChannel(chanSender)
       supabase.removeChannel(chanRecipient)
     }
-  }, []);
+  }, [user?.id]);
 
   // 3. Mark messages as read when opening a conversation
   useEffect(() => {
@@ -342,6 +343,12 @@ export default function Messages() {
       } catch (e) {
         console.log(e)
       }
+    }
+
+    if (!recipientUserId) {
+      toast.error('Recipient not found')
+      setSending(false)
+      return
     }
 
     const convId = activeConv || (recipientUserId ? [user.id, recipientUserId].sort().join('_') : null)
