@@ -146,21 +146,47 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
       }
 
       // Insert bid
-      const { error: bidInsertError } = await supabase
-        .from('bids')
-        .insert({
-          listing_id: listing.id,
-          bidder_id: authUser.id,
-          bidder_email: authUser.email,
-          bidder_name: authUser.user_metadata?.full_name || authUser.email,
-          amount,
-        })
+      let bidInsertError = null
+      {
+        const { error } = await supabase
+          .from('bids')
+          .insert({
+            listing_id: listing.id,
+            bidder_id: authUser.id,
+            bidder_email: authUser.email,
+            bidder_name: authUser.user_metadata?.full_name || authUser.email,
+            amount,
+          })
+
+        bidInsertError = error
+      }
 
       if (bidInsertError) {
         console.log(bidInsertError)
-        setValidationError(bidInsertError.message || 'Failed to place bid')
-        setIsSubmitting(false)
-        return
+        const msg = String(bidInsertError.message || '')
+        const lower = msg.toLowerCase()
+
+        // Some schemas don't have bidder_email/bidder_name columns; retry with minimal fields.
+        if (lower.includes('bidder_email') || lower.includes('bidder_name') || lower.includes("could not find the 'bidder_email'") || lower.includes("could not find the 'bidder_name'")) {
+          const { error: retryError } = await supabase
+            .from('bids')
+            .insert({
+              listing_id: listing.id,
+              bidder_id: authUser.id,
+              amount,
+            })
+
+          if (retryError) {
+            console.log(retryError)
+            setValidationError(retryError.message || 'Failed to place bid')
+            setIsSubmitting(false)
+            return
+          }
+        } else {
+          setValidationError(bidInsertError.message || 'Failed to place bid')
+          setIsSubmitting(false)
+          return
+        }
       }
 
       // Update listing (try with highest_bidder_id if the column exists)
