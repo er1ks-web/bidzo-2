@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/supabase'
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -20,34 +20,62 @@ export default function AcceptBidButton({ listing, onAccepted }) {
 
   if (!listing.current_bid || !listing.highest_bidder) return null;
 
+  const isUuid = (v) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ''));
+
   const handleAccept = async () => {
     setLoading(true);
     try {
       // End the auction immediately and mark as sold_pending
-      await base44.entities.Listing.update(listing.id, {
-        status: 'sold_pending',
-        auction_end: new Date().toISOString(),
-      });
+      const { error: updateError } = await supabase
+        .from('listings')
+        .update({
+          status: 'sold_pending',
+          auction_end: new Date().toISOString(),
+        })
+        .eq('id', listing.id)
+
+      if (updateError) throw updateError
 
       // Create the transaction
-      await base44.entities.AuctionTransaction.create({
-        listing_id: listing.id,
-        listing_title: listing.title,
-        listing_image: listing.images?.[0] || null,
-        seller_email: listing.seller_email,
-        seller_name: listing.seller_name,
-        buyer_email: listing.highest_bidder,
-        buyer_name: listing.highest_bidder_name,
-        winning_amount: listing.current_bid,
-        status: 'sold_pending',
-        buyer_confirmed: false,
-        seller_confirmed: false,
-      });
+      let buyerId = listing.highest_bidder
+      const sellerId = listing.seller_id
+
+      if (buyerId && !isUuid(buyerId)) {
+        const { data: buyerProfiles, error: buyerProfileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', buyerId)
+          .limit(1)
+
+        if (buyerProfileError) throw buyerProfileError
+        const row = Array.isArray(buyerProfiles) ? (buyerProfiles[0] || null) : null
+        buyerId = row?.id || null
+      }
+
+      if (!buyerId || !sellerId) {
+        throw new Error('Missing buyer or seller id for transaction')
+      }
+
+      const { error: insertError } = await supabase
+        .from('auction_transactions')
+        .insert({
+          listing_id: listing.id,
+          listing_title: listing.title,
+          listing_image: listing.images?.[0] || null,
+          seller_id: sellerId,
+          buyer_id: buyerId,
+          winning_amount: listing.current_bid,
+          status: 'sold_pending',
+          buyer_confirmed: false,
+          seller_confirmed: false,
+        })
+
+      if (insertError) throw insertError
 
       toast.success('Bid accepted! The auction has ended and a transaction has been created.');
       onAccepted?.();
     } catch (err) {
-      toast.error(err.message || 'Something went wrong.');
+      toast.error(err?.message || 'Something went wrong.');
     }
     setLoading(false);
   };

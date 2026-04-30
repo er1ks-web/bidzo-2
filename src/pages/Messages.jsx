@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useI18n } from '@/lib/i18n.jsx';
-import { base44 } from '@/api/base44Client';
 import { supabase } from '@/supabase'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,10 @@ function dedup(msgs) {
   return msgs.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; });
 }
 
+function isUuid(v) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ''));
+}
+
 export default function Messages() {
   const { t } = useI18n();
   const params = new URLSearchParams(window.location.search);
@@ -32,13 +35,14 @@ export default function Messages() {
   const [activeConv, setActiveConv] = useState(params.get('conv') || null);
   const [newMessage, setNewMessage] = useState('');
   const [recipientEmail, setRecipientEmail] = useState(params.get('to') || '');
+  const [recipientId, setRecipientId] = useState(null);
   const [recipientName, setRecipientName] = useState(params.get('toName') || '');
   const [sending, setSending] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const imageInputRef = useRef(null);
-  // Map email -> { username, avatar } from UserProfile
+  // Map user_id -> { email, username, avatar } from profiles
   const [profileMap, setProfileMap] = useState({});
   const isMobile = useIsMobile();
 
@@ -70,21 +74,61 @@ export default function Messages() {
       userRef.current = u
       setUser(u)
 
+      // Resolve initial recipient id (when navigating from listing)
+      if (params.get('to')) {
+        try {
+          const { data: recRows, error: recErr } = await supabase
+            .from('profiles')
+            .select('id, email, username, profile_picture_url')
+            .eq('email', params.get('to'))
+            .limit(1)
+
+          if (recErr) console.log(recErr)
+          const row = Array.isArray(recRows) ? (recRows[0] || null) : null
+          if (row?.id) {
+            setRecipientId(row.id)
+            setProfileMap(prev => ({
+              ...prev,
+              [row.id]: { email: row.email, username: row.username, avatar: row.profile_picture_url },
+            }))
+
+            // If we didn't get an id-based conversation id in URL, derive it now
+            const urlConv = params.get('conv')
+            const looksIdBased = typeof urlConv === 'string' && urlConv.includes('_') && urlConv.split('_').every(isUuid)
+            if (!looksIdBased) {
+              const derived = [u.id, row.id].sort().join('_')
+              setActiveConv(derived)
+            }
+          }
+        } catch (e) {
+          console.log(e)
+        }
+      }
+
       try {
-        const [sent, received] = await Promise.all([
-          base44.entities.Message.filter({ sender_email: u.email }, '-created_date', 200),
-          base44.entities.Message.filter({ recipient_email: u.email }, '-created_date', 200),
-        ])
-        const all = dedup([...(sent || []), ...(received || [])])
+        const { data: allRows, error: msgError } = await supabase
+          .from('messages')
+          .select('*')
+          .or(`sender_id.eq.${u.id},recipient_id.eq.${u.id}`)
+          .order('created_at', { ascending: false })
+          .limit(200)
+
+        if (msgError) console.log(msgError)
+
+        const all = dedup((Array.isArray(allRows) ? allRows : []).map(m => ({
+          ...m,
+          created_date: m.created_date || m.created_at,
+        })))
+
         setMessages(all)
 
-        // Collect unique other-party emails to resolve usernames
-        const emails = new Set();
+        // Collect unique other-party user ids to resolve usernames
+        const ids = new Set();
         all.forEach(m => {
-          if (m.sender_email !== u.email) emails.add(m.sender_email);
-          if (m.recipient_email !== u.email) emails.add(m.recipient_email);
+          if (m.sender_id && m.sender_id !== u.id) ids.add(m.sender_id);
+          if (m.recipient_id && m.recipient_id !== u.id) ids.add(m.recipient_id);
         });
-        resolveProfiles([...emails]);
+        resolveProfiles([...ids]);
       } catch (e) {
         console.log(e)
         setMessages([])
@@ -94,61 +138,98 @@ export default function Messages() {
     })
   }, []);
 
-  const resolveProfiles = async (emails) => {
-    if (!emails.length) return;
-    const results = await Promise.all(
-      emails.map(e => base44.entities.UserProfile.filter({ user_email: e }).catch(() => []))
-    );
-    const map = {};
-    results.forEach((res, i) => {
-      const p = res[0];
-      if (p) map[emails[i]] = { username: p.username, avatar: p.profile_picture_url };
-    });
+  const resolveProfiles = async (userIds) => {
+    const ids = Array.isArray(userIds) ? userIds.filter(Boolean) : []
+    if (!ids.length) return;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, email, username, profile_picture_url')
+      .in('id', ids)
+
+    if (error) {
+      console.log(error)
+      return
+    }
+
+    const rows = Array.isArray(data) ? data : []
+    const map = {}
+    rows.forEach((p) => {
+      if (!p?.id) return
+      map[p.id] = { email: p.email, username: p.username, avatar: p.profile_picture_url }
+    })
     setProfileMap(prev => ({ ...prev, ...map }));
   };
 
-  const getDisplayName = (email, fallbackName) => {
-    if (profileMap[email]?.username) return profileMap[email].username;
+  const getDisplayName = (userId, fallbackName) => {
+    const p = userId ? profileMap[userId] : null
+    if (p?.username) return p.username;
+    if (p?.email) return p.email.split('@')[0];
     if (fallbackName && !fallbackName.includes('@')) return fallbackName;
-    return email?.split('@')[0] || 'User';
+    return 'User';
   };
 
-  const getAvatar = (email) => profileMap[email]?.avatar || null;
+  const getAvatar = (userId) => profileMap[userId]?.avatar || null;
 
   // 2. Subscribe to ALL message changes
   useEffect(() => {
-    const unsub = base44.entities.Message.subscribe((event) => {
-      const u = userRef.current;
-      if (!u) return;
-      const msg = event.data;
+    const u = userRef.current
+    if (!u?.id) return;
 
-      if (event.type === 'create' && msg) {
-        if (msg.sender_email !== u.email && msg.recipient_email !== u.email) return;
-        setMessages(prev => dedup([...prev, msg]));
-        // Resolve username if new contact
-        const otherEmail = msg.sender_email !== u.email ? msg.sender_email : msg.recipient_email;
-        resolveProfiles([otherEmail]);
-      } else if (event.type === 'update' && msg) {
-        if (msg.sender_email !== u.email && msg.recipient_email !== u.email) return;
-        setMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
-      } else if (event.type === 'delete') {
-        setMessages(prev => prev.filter(m => m.id !== event.id));
-      }
-    });
-    return unsub;
+    const upsertFromPayload = (row) => {
+      if (!row) return
+      if (row.sender_id !== u.id && row.recipient_id !== u.id) return
+      const msg = { ...row, created_date: row.created_date || row.created_at }
+      setMessages(prev => dedup(prev.some(m => m.id === msg.id) ? prev.map(m => m.id === msg.id ? msg : m) : [...prev, msg]));
+      const otherId = msg.sender_id !== u.id ? msg.sender_id : msg.recipient_id
+      if (otherId) resolveProfiles([otherId]);
+    }
+
+    const removeFromPayload = (row) => {
+      const id = row?.id
+      if (!id) return
+      setMessages(prev => prev.filter(m => m.id !== id));
+    }
+
+    const chanSender = supabase
+      .channel(`messages-sender-${u.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `sender_id=eq.${u.id}` }, (payload) => {
+        if (payload.eventType === 'DELETE') removeFromPayload(payload.old)
+        else upsertFromPayload(payload.new)
+      })
+      .subscribe();
+
+    const chanRecipient = supabase
+      .channel(`messages-recipient-${u.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `recipient_id=eq.${u.id}` }, (payload) => {
+        if (payload.eventType === 'DELETE') removeFromPayload(payload.old)
+        else upsertFromPayload(payload.new)
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(chanSender)
+      supabase.removeChannel(chanRecipient)
+    }
   }, []);
 
   // 3. Mark messages as read when opening a conversation
   useEffect(() => {
     if (!activeConv || !userRef.current) return;
-    setMessages(prev => {
-      const toMark = prev.filter(
-        m => m.conversation_id === activeConv && m.recipient_email === userRef.current.email && !m.read
-      );
-      toMark.forEach(m => base44.entities.Message.update(m.id, { read: true }));
-      return prev.map(m => toMark.some(u => u.id === m.id) ? { ...m, read: true } : m);
-    });
-  }, [activeConv]);
+    const u = userRef.current
+    const toMarkIds = (Array.isArray(messages) ? messages : [])
+      .filter(m => m.conversation_id === activeConv && m.recipient_id === u.id && !m.is_read)
+      .map(m => m.id)
+
+    if (toMarkIds.length) {
+      supabase
+        .from('messages')
+        .update({ is_read: true })
+        .in('id', toMarkIds)
+        .then(({ error }) => { if (error) console.log(error) })
+    }
+
+    setMessages(prev => prev.map(m => (m.conversation_id === activeConv && m.recipient_id === u.id) ? { ...m, is_read: true } : m));
+  }, [activeConv, messages]);
 
   // Scroll to bottom
   const activeMessages = activeConv
@@ -170,12 +251,12 @@ export default function Messages() {
     if (!msg.conversation_id) return;
     const ex = convMap[msg.conversation_id];
     if (!ex || new Date(msg.created_date) > new Date(ex.lastMessage.created_date)) {
-      const otherEmail = msg.sender_email === user?.email ? msg.recipient_email : msg.sender_email;
-      const otherFallback = msg.sender_email === user?.email ? msg.recipient_name : msg.sender_name;
+      const otherId = msg.sender_id === user?.id ? msg.recipient_id : msg.sender_id;
+      const otherFallback = '';
       convMap[msg.conversation_id] = {
         id: msg.conversation_id,
-        otherParty: otherEmail,
-        otherPartyName: getDisplayName(otherEmail, otherFallback),
+        otherParty: otherId,
+        otherPartyName: getDisplayName(otherId, otherFallback),
         lastMessage: msg,
       };
     }
@@ -187,7 +268,7 @@ export default function Messages() {
 
   const unreadByConv = {};
   messages.forEach(m => {
-    if (m.recipient_email === user?.email && !m.read) {
+    if (m.recipient_id === user?.id && !m.is_read) {
       unreadByConv[m.conversation_id] = (unreadByConv[m.conversation_id] || 0) + 1;
     }
   });
@@ -213,24 +294,70 @@ export default function Messages() {
     let uploadedImageUrl = null;
     if (imageFile) {
       setUploadingImage(true);
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: imageFile });
-      uploadedImageUrl = file_url;
+      try {
+        const ext = (imageFile.name || 'png').split('.').pop() || 'png'
+        const path = `messages/${user.id}/${Date.now()}.${ext}`
+        const { error: uploadError } = await supabase
+          .storage
+          .from('message-images')
+          .upload(path, imageFile, { upsert: false })
+
+        if (uploadError) throw uploadError
+
+        const { data: pub } = supabase
+          .storage
+          .from('message-images')
+          .getPublicUrl(path)
+
+        uploadedImageUrl = pub?.publicUrl || null
+      } catch (e) {
+        console.log(e)
+        uploadedImageUrl = null
+      }
       setUploadingImage(false);
     }
 
-    const convId = activeConv || [user.email, recipientEmail].sort().join('_');
-    const recipient = recipientEmail || convMap[activeConv]?.otherParty;
+    const recipient = recipientEmail;
     const content = newMessage.trim();
+
+    let recipientUserId = recipientId
+    if (recipient && !recipientUserId) {
+      try {
+        const { data: recRows, error: recErr } = await supabase
+          .from('profiles')
+          .select('id, email, username, profile_picture_url')
+          .eq('email', recipient)
+          .limit(1)
+
+        if (recErr) console.log(recErr)
+        const row = Array.isArray(recRows) ? (recRows[0] || null) : null
+        if (row?.id) {
+          recipientUserId = row.id
+          setRecipientId(row.id)
+          setProfileMap(prev => ({
+            ...prev,
+            [row.id]: { email: row.email, username: row.username, avatar: row.profile_picture_url },
+          }))
+        }
+      } catch (e) {
+        console.log(e)
+      }
+    }
+
+    const convId = activeConv || (recipientUserId ? [user.id, recipientUserId].sort().join('_') : null)
+    if (!convId) {
+      setSending(false)
+      return
+    }
 
     const optimistic = {
       id: `temp_${Date.now()}`,
       conversation_id: convId,
-      sender_email: user.email,
-      sender_name: user.full_name,
-      recipient_email: recipient,
+      sender_id: user.id,
+      recipient_id: recipientUserId,
       content,
       image_url: uploadedImageUrl || imagePreview,
-      read: false,
+      is_read: false,
       created_date: new Date().toISOString(),
       _optimistic: true,
     };
@@ -240,24 +367,45 @@ export default function Messages() {
     clearImage();
     if (!activeConv) setActiveConv(convId);
 
-    const created = await base44.entities.Message.create({
-      conversation_id: convId,
-      listing_id: params.get('listing') || '',
-      sender_email: user.email,
-      sender_name: user.full_name,
-      recipient_email: recipient,
-      content,
-      image_url: uploadedImageUrl || '',
-      read: false,
-    });
+    try {
+      const listingParam = params.get('listing') || null
+      const listing_id = listingParam && isUuid(listingParam) ? listingParam : null
+      const { data: createdRows, error: createError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: convId,
+          listing_id,
+          sender_id: user.id,
+          recipient_id: recipientUserId,
+          content,
+          image_url: uploadedImageUrl || null,
+          is_read: false,
+        })
+        .select('*')
+        .limit(1)
 
-    setMessages(prev => dedup(prev.map(m => m.id === optimistic.id ? created : m)));
-    setSending(false);
+      if (createError) throw createError
+
+      const created = Array.isArray(createdRows) ? (createdRows[0] || null) : null
+      if (created) {
+        setMessages(prev => dedup(prev.map(m => m.id === optimistic.id ? { ...created, created_date: created.created_at } : m)));
+      }
+    } catch (e) {
+      console.log(e)
+      setMessages(prev => prev.filter(m => m.id !== optimistic.id))
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleDeleteChat = async (convId) => {
-    const toDelete = messages.filter(m => m.conversation_id === convId);
-    await Promise.all(toDelete.map(m => base44.entities.Message.delete(m.id).catch(() => {})));
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('conversation_id', convId)
+
+    if (error) console.log(error)
+
     setMessages(prev => prev.filter(m => m.conversation_id !== convId));
     if (activeConv === convId) {
       setActiveConv(null);
@@ -274,7 +422,9 @@ export default function Messages() {
     );
   }
 
-  const activeRecipientDisplay = getDisplayName(recipientEmail, recipientName);
+  const activeRecipientProfile = recipientId ? profileMap[recipientId] : null
+  const activeRecipientDisplay = getDisplayName(recipientId, recipientName);
+  const activeRecipientEmail = activeRecipientProfile?.email || recipientEmail
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
@@ -305,7 +455,9 @@ export default function Messages() {
                     <button
                       onClick={() => {
                         setActiveConv(conv.id);
-                        setRecipientEmail(conv.otherParty);
+                        const p = profileMap[conv.otherParty]
+                        setRecipientId(conv.otherParty);
+                        setRecipientEmail(p?.email || '');
                         setRecipientName(displayName);
                       }}
                       className={cn(
@@ -314,7 +466,7 @@ export default function Messages() {
                       )}
                     >
                       <div className="relative w-10 h-10 shrink-0">
-                        {conv.otherParty === 'system@bidzo.app' ? (
+                        {false ? (
                           <div className="w-10 h-10 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-base">
                             🔔
                           </div>
@@ -388,15 +540,15 @@ export default function Messages() {
                 <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => { setActiveConv(null); setRecipientEmail(''); setRecipientName(''); }}>
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
-                {getAvatar(recipientEmail) ? (
-                  <img src={getAvatar(recipientEmail)} alt={activeRecipientDisplay} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                {getAvatar(recipientId) ? (
+                  <img src={getAvatar(recipientId)} alt={activeRecipientDisplay} className="w-8 h-8 rounded-full object-cover shrink-0" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     <User className="w-4 h-4 text-primary" />
                   </div>
                 )}
                 <Link
-                  to={`/seller/${encodeURIComponent(recipientEmail)}`}
+                  to={`/seller/${encodeURIComponent(recipientId || recipientEmail)}`}
                   className="font-semibold text-sm hover:text-accent transition-colors flex-1"
                 >
                   {activeRecipientDisplay}
@@ -432,8 +584,8 @@ export default function Messages() {
               <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ overflowAnchor: 'none' }}>
                 <AnimatePresence initial={false}>
                   {activeMessages.map((msg) => {
-                    const isMine = msg.sender_email === user.email;
-                    const isSystem = msg.sender_email === 'system@bidzo.app';
+                    const isMine = msg.sender_id === user.id;
+                    const isSystem = false;
                     return (
                       <motion.div
                         key={msg.id}
@@ -489,7 +641,7 @@ export default function Messages() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {recipientEmail === 'system@bidzo.app' ? (
+              {false ? (
                 <div className="border-t p-3 text-center text-xs text-muted-foreground">
                   This is a notifications channel from Bidzo Team — you cannot reply here.
                 </div>

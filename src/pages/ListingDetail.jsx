@@ -218,6 +218,11 @@ export default function ListingDetail() {
   const isSoldPending = ['sold_pending', 'in_progress', 'completed'].includes(listing?.status);
   const isWinner = user?.email === listing?.highest_bidder;
 
+  const topBid = Array.isArray(bids) ? (bids[0] || null) : null
+  const highestBidderFallback = listing?.highest_bidder || topBid?.bidder_email || topBid?.bidder_id || null
+  const highestBidderNameFallback = listing?.highest_bidder_name || topBid?.bidder_name || null
+  const currentBidFallback = listing?.current_bid || topBid?.amount || null
+
   const handleContact = () => {
     if (!user) {
       requireLogin('Log in to message the seller');
@@ -410,9 +415,14 @@ export default function ListingDetail() {
           )}
 
           {/* Accept current bid — seller shortcut to end auction early */}
-          {isOwner && listing.status === 'active' && isAuction && !hasEnded && listing.current_bid && listing.highest_bidder && (
+          {isOwner && listing.status === 'active' && isAuction && !hasEnded && currentBidFallback && highestBidderFallback && (
             <AcceptBidButton
-              listing={listing}
+              listing={{
+                ...listing,
+                current_bid: currentBidFallback,
+                highest_bidder: highestBidderFallback,
+                highest_bidder_name: highestBidderNameFallback,
+              }}
               onAccepted={() => {
                 queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
                 queryClient.invalidateQueries({ queryKey: ['bids', listingId] });
