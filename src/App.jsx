@@ -27,6 +27,7 @@ import About from '@/pages/About';
 import HowItWorks from '@/pages/HowItWorks';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
+import AuthCallback from '@/pages/AuthCallback';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 
 const AuthenticatedApp = () => {
@@ -54,6 +55,7 @@ const AuthenticatedApp = () => {
         {/* Public pages — no auth required */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/browse" element={<Browse />} />
         <Route path="/listing/:id" element={<ListingDetail />} />
         <Route path="/seller/:id" element={<PublicProfile />} />

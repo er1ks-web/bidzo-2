@@ -11,6 +11,7 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
   const [authError, setAuthError] = useState(null);
   const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   useEffect(() => {
     checkAppState();
@@ -70,58 +71,56 @@ export const AuthProvider = ({ children }) => {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
 
-      // If we just returned from an OAuth provider (Google), exchange the code for a session.
-      // Without this, the app can redirect successfully but still appear logged out.
-      try {
-        if (typeof window !== 'undefined') {
-          const params = new URLSearchParams(window.location.search)
-          const hasOAuthCode = !!params.get('code')
-          const hasAccessTokenHash = typeof window.location.hash === 'string' && window.location.hash.includes('access_token=')
-
-          // Implicit flow (tokens in URL hash)
-          if (hasAccessTokenHash) {
-            const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
-            const access_token = hashParams.get('access_token')
-            const refresh_token = hashParams.get('refresh_token')
-
-            if (access_token && refresh_token) {
-              const { error: setSessionError } = await supabase.auth.setSession({ access_token, refresh_token })
-              if (setSessionError) console.log(setSessionError)
-            }
-
-            // Clean the URL hash to avoid leaking tokens and avoid re-processing
-            window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`)
-          }
-
-          if (hasOAuthCode) {
-            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href)
-            if (exchangeError) console.log(exchangeError)
-
-            // Clean the URL (remove code param) to avoid re-processing on refresh
-            params.delete('code')
-            params.delete('state')
-            params.delete('error')
-            params.delete('error_code')
-            params.delete('error_description')
-            const next = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash}`
-            window.history.replaceState({}, document.title, next)
-          }
-        }
-      } catch (e) {
-        console.log(e)
-      }
-
       const { data, error } = await supabase.auth.getUser();
       if (error) console.log(error)
 
       const currentUser = data?.user || null;
       setUser(currentUser);
       setIsAuthenticated(!!currentUser);
+
+      // Ensure a profile record exists (Google + email/password).
+      // Also detect onboarding needed if required fields are missing.
+      if (currentUser?.id && currentUser?.email) {
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .limit(1)
+
+          if (profileError) console.log(profileError)
+
+          const profile = Array.isArray(profileData) ? (profileData[0] || null) : null
+          if (!profile) {
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: currentUser.id,
+                email: currentUser.email,
+                full_name: currentUser.user_metadata?.full_name || currentUser.email,
+                profile_picture_url: currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || '',
+              })
+
+            if (insertError) console.log(insertError)
+            setNeedsOnboarding(true)
+          } else {
+            const missingUsername = !profile.username
+            const missingPhone = !profile.phone_number
+            setNeedsOnboarding(missingUsername || missingPhone)
+          }
+        } catch (e) {
+          console.log(e)
+        }
+      } else {
+        setNeedsOnboarding(false)
+      }
+
       setIsLoadingAuth(false);
     } catch (error) {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
+      setNeedsOnboarding(false)
       
       // If user auth fails, it might be an expired token
       if (error.status === 401 || error.status === 403) {
@@ -171,6 +170,7 @@ export const AuthProvider = ({ children }) => {
     isLoadingPublicSettings,
     authError,
     appPublicSettings,
+    needsOnboarding,
     logout,
     navigateToLogin,
     requireLogin,
@@ -182,6 +182,7 @@ export const AuthProvider = ({ children }) => {
     isLoadingPublicSettings,
     authError,
     appPublicSettings,
+    needsOnboarding,
     requireLogin,
   ]);
 
