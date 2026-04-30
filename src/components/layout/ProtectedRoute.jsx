@@ -9,6 +9,22 @@ export default function ProtectedRoute({ children }) {
 
   useEffect(() => {
     if (!isLoadingAuth && !user) {
+      try {
+        if (typeof window !== 'undefined' && location.pathname !== '/auth/callback') {
+          const params = new URLSearchParams(window.location.search)
+          const hasOAuthCode = !!params.get('code')
+          const hasAccessTokenHash = typeof window.location.hash === 'string' && window.location.hash.includes('access_token=')
+
+          if (hasOAuthCode || hasAccessTokenHash) {
+            const target = `/auth/callback${window.location.search || ''}${window.location.hash || ''}`
+            window.location.replace(target)
+            return
+          }
+        }
+      } catch (e) {
+        console.log(e)
+      }
+
       requireLogin();
       navigate('/login', { replace: true, state: { from: location.pathname } });
     }
