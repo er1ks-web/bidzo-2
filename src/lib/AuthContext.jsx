@@ -76,6 +76,23 @@ export const AuthProvider = ({ children }) => {
         if (typeof window !== 'undefined') {
           const params = new URLSearchParams(window.location.search)
           const hasOAuthCode = !!params.get('code')
+          const hasAccessTokenHash = typeof window.location.hash === 'string' && window.location.hash.includes('access_token=')
+
+          // Implicit flow (tokens in URL hash)
+          if (hasAccessTokenHash) {
+            const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+            const access_token = hashParams.get('access_token')
+            const refresh_token = hashParams.get('refresh_token')
+
+            if (access_token && refresh_token) {
+              const { error: setSessionError } = await supabase.auth.setSession({ access_token, refresh_token })
+              if (setSessionError) console.log(setSessionError)
+            }
+
+            // Clean the URL hash to avoid leaking tokens and avoid re-processing
+            window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`)
+          }
+
           if (hasOAuthCode) {
             const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href)
             if (exchangeError) console.log(exchangeError)
