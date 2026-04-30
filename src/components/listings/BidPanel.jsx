@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/supabase';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Gavel, TrendingUp, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { getMinNextBid, getMaxBid, validateBid } from '@/lib/bidRules';
+import { getMinIncrement, getMinNextBid, getMaxBid, validateBid } from '@/lib/bidRules';
 import { motion, AnimatePresence } from 'framer-motion';
 import FirstBidWarningModal from './FirstBidWarningModal';
 import BidRestrictionAlert from './BidRestrictionAlert';
@@ -23,11 +23,21 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
 
   useEffect(() => {
     if (!user) return;
-    base44.entities.BuyerTrust.filter({ user_email: user.email }).then(records => {
-      if (records.length > 0) {
-        setBuyerTrust(records[0]);
+    ;(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('buyer_trust')
+          .select('*')
+          .eq('user_email', user.email)
+          .limit(1)
+
+        if (error) console.log(error)
+        const record = Array.isArray(data) ? (data[0] || null) : null
+        setBuyerTrust(record)
+      } catch (e) {
+        console.log(e)
       }
-    });
+    })()
   }, [user]);
 
   const currentBid = listing.current_bid ?? listing.price;
@@ -45,8 +55,12 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!user) {
+  const handleSubmit = async ({ skipFirstBidCheck = false } = {}) => {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError) console.log(userError)
+    const authUser = userData?.user
+
+    if (!authUser) {
       requireLogin('Log in to place a bid');
       return;
     }
@@ -59,7 +73,7 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
     }
 
     // Check if first bid and show warning
-    if (!buyerTrust?.first_bid_acknowledged) {
+    if (!skipFirstBidCheck && !buyerTrust?.first_bid_acknowledged) {
       setShowFirstBidWarning(true);
       return;
     }
@@ -82,33 +96,113 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
     setValidationError('');
 
     try {
-      const response = await base44.functions.invoke('placeBid', {
-        listing_id: listing.id,
-        amount,
-      });
+      // Fetch latest listing state to validate and compute counters
+      const { data: listingData, error: listingError } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('id', listing.id)
+        .limit(1)
 
-      if (response.data?.error) {
-        setValidationError(response.data.error);
-        setIsSubmitting(false);
-        return;
+      if (listingError) console.log(listingError)
+
+      const fresh = Array.isArray(listingData) ? (listingData[0] || null) : null
+      if (!fresh) {
+        setValidationError('Listing not found.')
+        setIsSubmitting(false)
+        return
       }
 
-      if (response.data?.extended) {
-        toast.info('Auction extended by 5 minutes!');
+      if (fresh.listing_type !== 'auction') {
+        setValidationError('This listing is not an auction.')
+        setIsSubmitting(false)
+        return
       }
 
-      // Track successful bid placement
-      base44.analytics.track({
-        eventName: 'bid_placed_successfully',
-        properties: {
+      if (fresh.status !== 'active') {
+        setValidationError('This auction is no longer active.')
+        setIsSubmitting(false)
+        return
+      }
+
+      if (fresh.auction_end && new Date(fresh.auction_end) < new Date()) {
+        setValidationError('This auction has ended.')
+        setIsSubmitting(false)
+        return
+      }
+
+      if (fresh.seller_id && authUser.id === fresh.seller_id) {
+        setValidationError('You cannot bid on your own listing.')
+        setIsSubmitting(false)
+        return
+      }
+
+      const freshCurrentBid = fresh.current_bid ?? fresh.price ?? 0
+      const minIncrement = typeof fresh.min_bid_increment === 'number' ? fresh.min_bid_increment : getMinIncrement(freshCurrentBid)
+      const minAllowed = freshCurrentBid + minIncrement
+      if (amount < minAllowed) {
+        setValidationError(`Your bid is too low. Minimum allowed bid is €${minAllowed.toFixed(2)}.`)
+        setIsSubmitting(false)
+        return
+      }
+
+      // Insert bid
+      const { error: bidInsertError } = await supabase
+        .from('bids')
+        .insert({
           listing_id: listing.id,
-          listing_title: listing.title,
-          bid_amount: amount,
-          seller_email: listing.seller_email,
-          category: listing.category,
-          is_first_bid: !listing.current_bid || listing.current_bid === listing.price,
+          bidder_id: authUser.id,
+          bidder_email: authUser.email,
+          bidder_name: authUser.user_metadata?.full_name || authUser.email,
+          amount,
+        })
+
+      if (bidInsertError) {
+        console.log(bidInsertError)
+        setValidationError(bidInsertError.message || 'Failed to place bid')
+        setIsSubmitting(false)
+        return
+      }
+
+      // Update listing (try with highest_bidder_id if the column exists)
+      const updateBase = {
+        current_bid: amount,
+        bid_count: (fresh.bid_count || 0) + 1,
+      }
+
+      let updateError = null
+      {
+        const { error } = await supabase
+          .from('listings')
+          .update({
+            ...updateBase,
+            highest_bidder_id: authUser.id,
+          })
+          .eq('id', listing.id)
+
+        updateError = error
+      }
+
+      if (updateError) {
+        console.log(updateError)
+        const msg = String(updateError.message || '')
+        if (msg.toLowerCase().includes('highest_bidder_id')) {
+          const { error: retryError } = await supabase
+            .from('listings')
+            .update(updateBase)
+            .eq('id', listing.id)
+
+          if (retryError) {
+            console.log(retryError)
+            setValidationError(retryError.message || 'Failed to update listing')
+            setIsSubmitting(false)
+            return
+          }
+        } else {
+          setValidationError(updateError.message || 'Failed to update listing')
+          setIsSubmitting(false)
+          return
         }
-      });
+      }
 
       toast.success('Bid placed successfully!');
       setBidAmount('');
@@ -116,6 +210,7 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
       setShowSuccessSheet(true);
       onBidPlaced?.();
     } catch (err) {
+      console.log(err)
       const errorMsg = err.response?.data?.error || err.message || 'Failed to place bid';
       setValidationError(errorMsg);
       setIsSubmitting(false);
@@ -123,19 +218,41 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
   };
 
   const handleFirstBidConfirm = async () => {
-    if (!buyerTrust) {
-      await base44.entities.BuyerTrust.create({
-        user_email: user.email,
-        first_bid_acknowledged: true
-      }).then(record => setBuyerTrust(record));
-    } else {
-      await base44.entities.BuyerTrust.update(buyerTrust.id, {
-        first_bid_acknowledged: true
-      }).then(record => setBuyerTrust(record));
+    if (!user?.email) return
+
+    try {
+      if (!buyerTrust) {
+        const { data, error } = await supabase
+          .from('buyer_trust')
+          .insert({
+            user_email: user.email,
+            first_bid_acknowledged: true,
+          })
+          .select('*')
+
+        if (error) console.log(error)
+        const record = Array.isArray(data) ? (data[0] || null) : null
+        if (record) setBuyerTrust(record)
+      } else {
+        const { data, error } = await supabase
+          .from('buyer_trust')
+          .update({ first_bid_acknowledged: true })
+          .eq('id', buyerTrust.id)
+          .select('*')
+
+        if (error) console.log(error)
+        const record = Array.isArray(data) ? (data[0] || null) : null
+        if (record) setBuyerTrust(record)
+        else setBuyerTrust({ ...buyerTrust, first_bid_acknowledged: true })
+      }
+    } catch (e) {
+      console.log(e)
+      setBuyerTrust((prev) => (prev ? { ...prev, first_bid_acknowledged: true } : prev))
     }
+
     setShowFirstBidWarning(false);
-    // Re-submit the bid
-    await handleSubmit();
+    // Re-submit the bid without re-triggering the first-bid modal (avoids stale state loop)
+    await handleSubmit({ skipFirstBidCheck: true });
   };
 
   return (
