@@ -25,6 +25,10 @@ function isUuid(v) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ''));
 }
 
+function isIdBasedConvId(convId) {
+  return typeof convId === 'string' && convId.includes('_') && convId.split('_').every(isUuid);
+}
+
 export default function Messages() {
   const { t } = useI18n();
   const params = new URLSearchParams(window.location.search);
@@ -351,10 +355,15 @@ export default function Messages() {
       return
     }
 
-    const convId = activeConv || (recipientUserId ? [user.id, recipientUserId].sort().join('_') : null)
+    const derivedConvId = [user.id, recipientUserId].sort().join('_')
+    const convId = !isIdBasedConvId(activeConv) ? derivedConvId : (activeConv || derivedConvId)
     if (!convId) {
       setSending(false)
       return
+    }
+
+    if (activeConv !== convId) {
+      setActiveConv(convId)
     }
 
     const optimistic = {
