@@ -96,138 +96,16 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
     setValidationError('');
 
     try {
-      // Fetch latest listing state to validate and compute counters
-      const { data: listingData, error: listingError } = await supabase
-        .from('listings')
-        .select('*')
-        .eq('id', listing.id)
-        .limit(1)
+      const { error: rpcError } = await supabase.rpc('place_bid', {
+        p_listing_id: listing.id,
+        p_amount: amount,
+      })
 
-      if (listingError) console.log(listingError)
-
-      const fresh = Array.isArray(listingData) ? (listingData[0] || null) : null
-      if (!fresh) {
-        setValidationError('Listing not found.')
+      if (rpcError) {
+        console.log(rpcError)
+        setValidationError(rpcError.message || 'Failed to place bid')
         setIsSubmitting(false)
         return
-      }
-
-      if (fresh.listing_type !== 'auction') {
-        setValidationError('This listing is not an auction.')
-        setIsSubmitting(false)
-        return
-      }
-
-      if (fresh.status !== 'active') {
-        setValidationError('This auction is no longer active.')
-        setIsSubmitting(false)
-        return
-      }
-
-      if (fresh.auction_end && new Date(fresh.auction_end) < new Date()) {
-        setValidationError('This auction has ended.')
-        setIsSubmitting(false)
-        return
-      }
-
-      if (fresh.seller_id && authUser.id === fresh.seller_id) {
-        setValidationError('You cannot bid on your own listing.')
-        setIsSubmitting(false)
-        return
-      }
-
-      const freshCurrentBid = fresh.current_bid ?? fresh.price ?? 0
-      const minIncrement = typeof fresh.min_bid_increment === 'number' ? fresh.min_bid_increment : getMinIncrement(freshCurrentBid)
-      const minAllowed = freshCurrentBid + minIncrement
-      if (amount < minAllowed) {
-        setValidationError(`Your bid is too low. Minimum allowed bid is €${minAllowed.toFixed(2)}.`)
-        setIsSubmitting(false)
-        return
-      }
-
-      // Insert bid
-      let bidInsertError = null
-      {
-        const { error } = await supabase
-          .from('bids')
-          .insert({
-            listing_id: listing.id,
-            bidder_id: authUser.id,
-            bidder_email: authUser.email,
-            bidder_name: authUser.user_metadata?.full_name || authUser.email,
-            amount,
-          })
-
-        bidInsertError = error
-      }
-
-      if (bidInsertError) {
-        console.log(bidInsertError)
-        const msg = String(bidInsertError.message || '')
-        const lower = msg.toLowerCase()
-
-        // Some schemas don't have bidder_email/bidder_name columns; retry with minimal fields.
-        if (lower.includes('bidder_email') || lower.includes('bidder_name') || lower.includes("could not find the 'bidder_email'") || lower.includes("could not find the 'bidder_name'")) {
-          const { error: retryError } = await supabase
-            .from('bids')
-            .insert({
-              listing_id: listing.id,
-              bidder_id: authUser.id,
-              amount,
-            })
-
-          if (retryError) {
-            console.log(retryError)
-            setValidationError(retryError.message || 'Failed to place bid')
-            setIsSubmitting(false)
-            return
-          }
-        } else {
-          setValidationError(bidInsertError.message || 'Failed to place bid')
-          setIsSubmitting(false)
-          return
-        }
-      }
-
-      // Update listing (try with highest_bidder_id if the column exists)
-      const updateBase = {
-        current_bid: amount,
-        bid_count: (fresh.bid_count || 0) + 1,
-      }
-
-      let updateError = null
-      {
-        const { error } = await supabase
-          .from('listings')
-          .update({
-            ...updateBase,
-            highest_bidder_id: authUser.id,
-          })
-          .eq('id', listing.id)
-
-        updateError = error
-      }
-
-      if (updateError) {
-        console.log(updateError)
-        const msg = String(updateError.message || '')
-        if (msg.toLowerCase().includes('highest_bidder_id')) {
-          const { error: retryError } = await supabase
-            .from('listings')
-            .update(updateBase)
-            .eq('id', listing.id)
-
-          if (retryError) {
-            console.log(retryError)
-            setValidationError(retryError.message || 'Failed to update listing')
-            setIsSubmitting(false)
-            return
-          }
-        } else {
-          setValidationError(updateError.message || 'Failed to update listing')
-          setIsSubmitting(false)
-          return
-        }
       }
 
       toast.success('Bid placed successfully!');
