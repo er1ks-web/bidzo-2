@@ -485,11 +485,15 @@ export default function ListingDetail() {
           <div className="bg-card rounded-xl border p-4 sm:p-5">
             <p className="text-sm text-muted-foreground mb-3">{t('listing.seller')}</p>
             <Link
-              to={`/seller/${encodeURIComponent(listing.seller_email)}`}
+              to={`/seller/${encodeURIComponent(listing.seller_id || listing.seller_email)}`}
               className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="w-5 h-5 text-primary" />
+                {sellerProfile?.profile_picture_url ? (
+                  <img src={sellerProfile.profile_picture_url} alt={listing.seller_name} className="w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  <User className="w-5 h-5 text-primary" />
+                )}
               </div>
               <div>
                 <p className="font-semibold group-hover:text-accent transition-colors">

@@ -26,39 +26,23 @@ export default function PublicProfile() {
     if (!sellerId) return;
     async function load() {
       try {
-        const [profileRes, activeRes, soldRes, reviewsRes] = await Promise.all([
+        const q = supabase.from('profiles').select('*').limit(1)
+        const { data: profileData, error: profileError } = isUuid ? await q.eq('id', sellerId) : await q.eq('email', sellerId)
+        if (profileError) console.log(profileError)
+        const profileRes = Array.isArray(profileData) ? (profileData[0] || null) : null
+
+        const sellerUserId = isUuid ? sellerId : (profileRes?.id || null)
+        const sellerEmail = profileRes?.email || (sellerId.includes('@') ? sellerId : null)
+
+        const [allListingsRes, reviewsRes] = await Promise.all([
           (async () => {
-            const q = supabase.from('profiles').select('*').limit(1)
-            const { data, error } = isUuid ? await q.eq('id', sellerId) : await q.eq('email', sellerId)
-            if (error) console.log(error)
-            return Array.isArray(data) ? (data[0] || null) : null
-          })(),
-          (async () => {
-            const q = supabase
+            if (!sellerUserId) return []
+            const { data, error } = await supabase
               .from('listings')
               .select('*')
-              .eq('status', 'active')
+              .eq('seller_id', sellerUserId)
               .order('created_at', { ascending: false })
-              .limit(50)
-
-            const { data, error } = isUuid
-              ? await q.eq('seller_id', sellerId)
-              : await q.eq('seller_email', sellerId)
-
-            if (error) console.log(error)
-            return Array.isArray(data) ? data : []
-          })(),
-          (async () => {
-            const q = supabase
-              .from('listings')
-              .select('*')
-              .eq('status', 'completed')
-              .order('created_at', { ascending: false })
-              .limit(50)
-
-            const { data, error } = isUuid
-              ? await q.eq('seller_id', sellerId)
-              : await q.eq('seller_email', sellerId)
+              .limit(100)
 
             if (error) console.log(error)
             return Array.isArray(data) ? data : []
@@ -70,11 +54,16 @@ export default function PublicProfile() {
               .order('created_at', { ascending: false })
               .limit(50)
 
-            const { data, error } = await q.eq('reviewed_email', sellerId)
+            if (!sellerEmail) return []
+            const { data, error } = await q.eq('reviewed_email', sellerEmail)
             if (error) console.log(error)
             return Array.isArray(data) ? data : []
           })(),
         ])
+
+        const visibleListings = (allListingsRes || []).filter(l => !l?.is_deleted)
+        const activeRes = visibleListings.filter(l => !l?.is_sold && l?.status !== 'completed')
+        const soldRes = visibleListings.filter(l => l?.is_sold || l?.status === 'completed')
 
         setProfile(profileRes || null);
         setListings(activeRes || []);
@@ -169,21 +158,6 @@ export default function PublicProfile() {
         </div>
       </div>
 
-      {/* Listings */}
-      <h2 className="text-lg font-display font-bold mb-4">Active Listings</h2>
-      {listings.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground bg-card rounded-xl border">
-          <Package className="w-10 h-10 mx-auto mb-2 opacity-30" />
-          <p>No active listings</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {listings.map((l, i) => (
-            <ListingCard key={l.id} listing={l} index={i} />
-          ))}
-        </div>
-      )}
-
       {/* Reviews + Sold Listings — tabbed */}
       <div className="mt-8 bg-card rounded-xl border p-4 sm:p-6">
         <Tabs defaultValue="reviews">
@@ -221,6 +195,21 @@ export default function PublicProfile() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Listings */}
+      <h2 className="text-lg font-display font-bold mb-4 mt-8">Active Listings</h2>
+      {listings.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground bg-card rounded-xl border">
+          <Package className="w-10 h-10 mx-auto mb-2 opacity-30" />
+          <p>No active listings</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {listings.map((l, i) => (
+            <ListingCard key={l.id} listing={l} index={i} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
