@@ -13,8 +13,9 @@ import TopUpModal from '@/components/wallet/TopUpModal';
 import EditProfileCard from '@/components/profile/EditProfileCard';
 import NotificationPrefsCard from '@/components/profile/NotificationPrefsCard';
 import { format } from 'date-fns';
-import { getWalletState } from '@/lib/wallet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ENABLE_WALLET } from '@/lib/featureFlags';
+import { getWalletState } from '@/lib/wallet';
 
 export default function Profile() {
   const { t, lang } = useI18n();
@@ -24,6 +25,10 @@ export default function Profile() {
   const [walletState, setWalletState] = useState(null);
   const [showTopUp, setShowTopUp] = useState(false);
   const [lightbox, setLightbox] = useState(null); // { images, index }
+
+  // Wallet is intentionally disabled for free-launch mode.
+  // Flip VITE_ENABLE_WALLET=true to re-enable once integrated.
+  const enableWallet = ENABLE_WALLET;
 
   const ReviewImageLightbox = lightbox ? (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={() => setLightbox(null)}>
@@ -108,8 +113,10 @@ export default function Profile() {
       }
 
       setUser(u);
-      const ws = await getWalletState(u.id);
-      setWalletState(ws);
+      if (enableWallet) {
+        const ws = await getWalletState(u.id);
+        setWalletState(ws);
+      }
     })().catch(() => {})
   }, []);
 
@@ -263,7 +270,7 @@ export default function Profile() {
       const rows = Array.isArray(data) ? data : []
       return rows.map(tx => ({ ...tx, created_date: tx.created_date || tx.created_at }))
     },
-    enabled: !!user,
+    enabled: enableWallet && !!user,
   });
 
   const avgRating = reviews.length > 0
@@ -271,7 +278,7 @@ export default function Profile() {
     : null;
 
   const refreshWallet = async () => {
-    if (!user) return;
+    if (!user || !enableWallet) return;
     const ws = await getWalletState(user.id);
     setWalletState(ws);
     refetchTx();
@@ -295,10 +302,10 @@ export default function Profile() {
 
   const avatarUrl = userProfile?.profile_picture_url;
 
-  const [activeTab, setActiveTab] = useState(isMobile ? 'wallet' : 'listings');
+  const [activeTab, setActiveTab] = useState(enableWallet ? (isMobile ? 'wallet' : 'listings') : 'listings');
 
   useEffect(() => {
-    setActiveTab(isMobile ? 'wallet' : 'listings');
+    setActiveTab(enableWallet ? (isMobile ? 'wallet' : 'listings') : 'listings');
   }, [isMobile]);
 
   if (!user) {
@@ -370,26 +377,32 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Desktop: Wallet separate + Tabs */}
+      {/* Desktop */}
       {!isMobile && (
-        <div className="grid lg:grid-cols-3 gap-6 items-start">
-          {/* Wallet Card — Desktop only */}
-          <div className="lg:col-span-1">
-            {walletState ? (
-              <WalletCard
-                walletState={walletState}
-                transactions={transactions}
-                onTopUp={() => setShowTopUp(true)}
-              />
-            ) : (
-              <div className="bg-card border rounded-xl p-6 animate-pulse h-64" />
-            )}
-          </div>
+        <div className={enableWallet ? 'grid lg:grid-cols-3 gap-6 items-start' : ''}>
+          {enableWallet && (
+            <div className="lg:col-span-1">
+              {walletState ? (
+                <WalletCard
+                  walletState={walletState}
+                  transactions={transactions}
+                  onTopUp={() => setShowTopUp(true)}
+                />
+              ) : (
+                <div className="bg-card border rounded-xl p-6 animate-pulse h-64" />
+              )}
+            </div>
+          )}
 
-          {/* Desktop Tabs */}
-          <div className="lg:col-span-2">
+          <div className={enableWallet ? 'lg:col-span-2' : ''}>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="flex-wrap h-auto gap-1">
+                {enableWallet && (
+                  <TabsTrigger value="wallet" className="gap-2">
+                    <WalletIcon className="w-4 h-4" />
+                    {t('wallet.wallet')}
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="listings" className="gap-2">
                   <Package className="w-4 h-4" />
                   {t('profile.myListings')} ({myListings.length})
@@ -403,6 +416,20 @@ export default function Profile() {
                   {t('profile.reviews')} ({reviews.length})
                 </TabsTrigger>
               </TabsList>
+
+              {enableWallet && (
+                <TabsContent value="wallet" className="mt-6">
+                  {walletState ? (
+                    <WalletCard
+                      walletState={walletState}
+                      transactions={transactions}
+                      onTopUp={() => setShowTopUp(true)}
+                    />
+                  ) : (
+                    <div className="bg-card border rounded-xl p-6 animate-pulse h-64" />
+                  )}
+                </TabsContent>
+              )}
 
               <TabsContent value="listings" className="mt-6 space-y-4">
                {(() => {
@@ -510,24 +537,26 @@ export default function Profile() {
                             ))}
                           </div>
                         )}
-                        </div>
-                        ))}
-                        </div>
-                        )}
-                        </TabsContent>
-                        </Tabs>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       )}
 
-      {/* Mobile: Wallet as first tab */}
+      {/* Mobile */}
       {isMobile && (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="flex-wrap h-auto gap-1 w-full">
-            <TabsTrigger value="wallet" className="gap-1.5 flex-1 text-xs sm:text-sm">
-              <WalletIcon className="w-4 h-4" />
-              {t('wallet.wallet')}
-            </TabsTrigger>
+            {enableWallet && (
+              <TabsTrigger value="wallet" className="gap-1.5 flex-1 text-xs sm:text-sm">
+                <WalletIcon className="w-4 h-4" />
+                {t('wallet.wallet')}
+              </TabsTrigger>
+            )}
             <TabsTrigger value="listings" className="gap-1.5 flex-1 text-xs sm:text-sm">
               <Package className="w-4 h-4" />
               {t('profile.myListings')} ({myListings.length})
@@ -538,21 +567,23 @@ export default function Profile() {
             </TabsTrigger>
             <TabsTrigger value="reviews" className="gap-1.5 flex-1 text-xs sm:text-sm">
               <Star className="w-4 h-4" />
-              {t('wallet.reviews')} ({reviews.length})
+              {t('profile.reviews')} ({reviews.length})
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="wallet" className="mt-6">
-            {walletState ? (
-              <WalletCard
-                walletState={walletState}
-                transactions={transactions}
-                onTopUp={() => setShowTopUp(true)}
-              />
-            ) : (
-              <div className="bg-card border rounded-xl p-6 animate-pulse h-64" />
-            )}
-          </TabsContent>
+          {enableWallet && (
+            <TabsContent value="wallet" className="mt-6">
+              {walletState ? (
+                <WalletCard
+                  walletState={walletState}
+                  transactions={transactions}
+                  onTopUp={() => setShowTopUp(true)}
+                />
+              ) : (
+                <div className="bg-card border rounded-xl p-6 animate-pulse h-64" />
+              )}
+            </TabsContent>
+          )}
 
           <TabsContent value="listings" className="mt-6 space-y-4">
             {(() => {
@@ -668,7 +699,7 @@ export default function Profile() {
         </Tabs>
       )}
 
-      {user && walletState && (
+      {enableWallet && user && walletState && (
         <TopUpModal
           open={showTopUp}
           onClose={() => setShowTopUp(false)}
