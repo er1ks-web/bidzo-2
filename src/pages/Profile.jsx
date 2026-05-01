@@ -503,14 +503,14 @@ export default function Profile() {
               </TabsContent>
 
               <TabsContent value="edit" className="mt-6 space-y-6">
-                 <EditProfileCard
-                   user={user}
-                   profile={userProfile}
-                   lang={lang}
-                   onProfileSaved={handleProfileSaved}
-                 />
-                 <NotificationPrefsCard user={user} />
-               </TabsContent>
+                <EditProfileCard
+                  user={user}
+                  profile={userProfile}
+                  lang={lang}
+                  onProfileSaved={handleProfileSaved}
+                />
+                <NotificationPrefsCard user={user} />
+              </TabsContent>
 
               <TabsContent value="reviews" className="mt-6">
                 {reviews.length === 0 ? (
