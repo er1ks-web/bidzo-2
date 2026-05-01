@@ -125,6 +125,11 @@ const translations = {
       settings: 'Iestatījumi',
       memberSince: 'Dalībnieks kopš',
       rating: 'Vērtējums',
+      login: 'Ienākt',
+      signup: 'Reģistrēties',
+      loginSubtitle: 'Ienāc, lai turpinātu',
+      signupSubtitle: 'Izveido kontu, lai turpinātu',
+      verifyEmailHint: 'Pēc reģistrēšanās, iespējams, būs jāapstiprina e-pasts, pirms vari ienākt.',
       logout: 'Iziet',
     },
     time: {
@@ -356,6 +361,11 @@ const translations = {
       settings: 'Settings',
       memberSince: 'Member since',
       rating: 'Rating',
+      login: 'Login',
+      signup: 'Sign up',
+      loginSubtitle: 'Sign in to continue',
+      signupSubtitle: 'Create an account to continue',
+      verifyEmailHint: 'After signing up, you may need to verify your email before you can log in.',
       logout: 'Logout',
     },
     time: {
@@ -464,7 +474,7 @@ const translations = {
   },
 };
 
-const I18nContext = createContext();
+const I18nContext = createContext(null);
 
 export function I18nProvider({ children }) {
   const [lang, setLang] = useState('en');

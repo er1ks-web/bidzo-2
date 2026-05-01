@@ -118,9 +118,16 @@ export default function Login() {
             variant="outline"
             disabled={loading}
             onClick={handleGoogle}
-            className="w-full"
+            className="w-full gap-2"
           >
-            Continue with Google
+            <span>Continue with</span>
+            <img
+              src="https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png"
+              alt="Google"
+              className="h-5 w-auto"
+              loading="lazy"
+              draggable={false}
+            />
           </Button>
 
           <div className="space-y-1.5">

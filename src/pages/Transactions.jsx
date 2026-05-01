@@ -17,6 +17,14 @@ export default function Transactions() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    try {
+      localStorage.setItem('tx_last_seen', new Date().toISOString());
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
     (async () => {
       const { data, error } = await supabase.auth.getUser()
       if (error) console.log(error)
@@ -126,22 +134,44 @@ export default function Transactions() {
 
   // Real-time subscription — updates all 4 steps live for both parties
   useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel(`auction_transactions_${user.id}`)
+    if (!user?.id) return;
+
+    const markUnseenUpdate = () => {
+      try {
+        localStorage.setItem('tx_last_update', new Date().toISOString());
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    const onChange = () => {
+      markUnseenUpdate()
+      refetchAll();
+    }
+
+    const buyerChannel = supabase
+      .channel(`auction_transactions_buyer_${user.id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'auction_transactions' },
-        () => {
-          refetchAll();
-        }
+        { event: '*', schema: 'public', table: 'auction_transactions', filter: `buyer_id=eq.${user.id}` },
+        onChange
+      )
+      .subscribe();
+
+    const sellerChannel = supabase
+      .channel(`auction_transactions_seller_${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'auction_transactions', filter: `seller_id=eq.${user.id}` },
+        onChange
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(buyerChannel);
+      supabase.removeChannel(sellerChannel);
     };
-  }, [user?.email]);
+  }, [user?.id, user?.email, queryClient]);
 
   const handleConfirm = async (tx) => {
     setConfirmLoading(tx.id);

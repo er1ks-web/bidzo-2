@@ -15,6 +15,7 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hasUnseenDeals, setHasUnseenDeals] = useState(false);
 
   const logoUrl = 'https://xnadmnketxbquyrgqmcs.supabase.co/storage/v1/object/public/site-assets/bidzo-web-logo-new.png'
   const fallbackLogoUrl = 'https://media.base44.com/images/public/69c6629c38b4f05a07d13e7c/236f5728d_ChatGPT_Image_Mar_28__2026__06_25_47_PM-removebg-preview.png'
@@ -46,6 +47,7 @@ export default function Navbar() {
   useEffect(() => {
     if (!isAuthenticated || !user?.id) {
       setUnreadCount(0)
+      setHasUnseenDeals(false)
       return;
     }
 
@@ -74,6 +76,36 @@ export default function Navbar() {
     return () => {
       cancelled = true
       supabase.removeChannel(chan)
+    }
+  }, [isAuthenticated, user?.id]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+
+    const compute = () => {
+      try {
+        const seen = localStorage.getItem('tx_last_seen')
+        const updated = localStorage.getItem('tx_last_update')
+        if (!updated) return setHasUnseenDeals(false)
+        if (!seen) return setHasUnseenDeals(true)
+        setHasUnseenDeals(new Date(updated) > new Date(seen))
+      } catch (e) {
+        setHasUnseenDeals(false)
+      }
+    }
+
+    compute()
+
+    const onStorage = (e) => {
+      if (e?.key === 'tx_last_seen' || e?.key === 'tx_last_update') compute()
+    }
+
+    window.addEventListener('storage', onStorage)
+    const interval = setInterval(compute, 1500)
+
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      clearInterval(interval)
     }
   }, [isAuthenticated, user?.id]);
 
@@ -119,6 +151,9 @@ export default function Navbar() {
                   <span className="relative">
                     <Icon className="w-4 h-4" />
                     {to === '/messages' && unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-accent" />
+                    )}
+                    {to === '/deals' && hasUnseenDeals && (
                       <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-accent" />
                     )}
                   </span>
@@ -178,6 +213,9 @@ export default function Navbar() {
                         <span className="relative">
                           <Icon className="w-5 h-5" />
                           {to === '/messages' && unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-accent" />
+                          )}
+                          {to === '/deals' && hasUnseenDeals && (
                             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-accent" />
                           )}
                         </span>
