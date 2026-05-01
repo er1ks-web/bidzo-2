@@ -139,6 +139,21 @@ export default function Profile() {
     enabled: !!user,
   });
 
+  useEffect(() => {
+    if (!user?.id) return
+
+    const chan = supabase
+      .channel(`reviews-profile-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews', filter: `reviewed_id=eq.${user.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['my-reviews', user?.email] })
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(chan)
+    }
+  }, [user?.id, user?.email, queryClient]);
+
   const { data: myListings = [] } = useQuery({
     queryKey: ['my-listings', user?.email],
     queryFn: async () => {

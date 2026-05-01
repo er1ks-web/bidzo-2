@@ -20,7 +20,52 @@ export default function PublicProfile() {
   const [listings, setListings] = useState([]);
   const [soldListings, setSoldListings] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [sellerUserId, setSellerUserId] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchReviews = async (reviewedId) => {
+    const q = supabase
+      .from('reviews')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (!reviewedId) return []
+    const { data, error } = await q.eq('reviewed_id', reviewedId)
+    if (error) console.log(error)
+    const rows = Array.isArray(data) ? data : []
+
+    const reviewerIds = [...new Set(rows.map(r => r.reviewer_id).filter(Boolean))]
+    const { data: reviewerProfiles, error: reviewerErr } = reviewerIds.length
+      ? await supabase
+        .from('profiles')
+        .select('id, email, username, full_name')
+        .in('id', reviewerIds)
+      : { data: [], error: null }
+
+    if (reviewerErr) console.log(reviewerErr)
+    const profileById = new Map((Array.isArray(reviewerProfiles) ? reviewerProfiles : []).map(p => [p.id, p]))
+
+    return rows.map(r => {
+      const p = r?.reviewer_id ? profileById.get(r.reviewer_id) : null
+      let parsedImages = []
+      try {
+        if (typeof r.images === 'string' && r.images.trim()) {
+          const val = JSON.parse(r.images)
+          if (Array.isArray(val)) parsedImages = val
+        }
+      } catch (e) {
+        parsedImages = []
+      }
+
+      return {
+        ...r,
+        reviewer_name: p?.username || p?.full_name || (p?.email ? p.email.split('@')[0] : null),
+        images: parsedImages,
+        created_date: r.created_date || r.created_at,
+      }
+    })
+  }
 
   useEffect(() => {
     if (!sellerId) return;
@@ -47,49 +92,7 @@ export default function PublicProfile() {
             if (error) console.log(error)
             return Array.isArray(data) ? data : []
           })(),
-          (async () => {
-            const q = supabase
-              .from('reviews')
-              .select('*')
-              .order('created_at', { ascending: false })
-              .limit(50)
-
-            if (!sellerUserId) return []
-            const { data, error } = await q.eq('reviewed_id', sellerUserId)
-            if (error) console.log(error)
-            const rows = Array.isArray(data) ? data : []
-
-            const reviewerIds = [...new Set(rows.map(r => r.reviewer_id).filter(Boolean))]
-            const { data: reviewerProfiles, error: reviewerErr } = reviewerIds.length
-              ? await supabase
-                .from('profiles')
-                .select('id, email, username, full_name')
-                .in('id', reviewerIds)
-              : { data: [], error: null }
-
-            if (reviewerErr) console.log(reviewerErr)
-            const profileById = new Map((Array.isArray(reviewerProfiles) ? reviewerProfiles : []).map(p => [p.id, p]))
-
-            return rows.map(r => {
-              const p = r?.reviewer_id ? profileById.get(r.reviewer_id) : null
-              let parsedImages = []
-              try {
-                if (typeof r.images === 'string' && r.images.trim()) {
-                  const val = JSON.parse(r.images)
-                  if (Array.isArray(val)) parsedImages = val
-                }
-              } catch (e) {
-                parsedImages = []
-              }
-
-              return {
-                ...r,
-                reviewer_name: p?.username || p?.full_name || (p?.email ? p.email.split('@')[0] : null),
-                images: parsedImages,
-                created_date: r.created_date || r.created_at,
-              }
-            })
-          })(),
+          fetchReviews(sellerUserId),
         ])
 
         const visibleListings = (allListingsRes || []).filter(l => !l?.is_deleted)
@@ -100,6 +103,7 @@ export default function PublicProfile() {
         setListings(activeRes || []);
         setSoldListings(soldRes || []);
         setReviews(reviewsRes || []);
+        setSellerUserId(sellerUserId || null)
       } catch (error) {
         console.log(error)
       } finally {
@@ -108,6 +112,26 @@ export default function PublicProfile() {
     }
     load();
   }, [sellerId]);
+
+  useEffect(() => {
+    if (!sellerUserId) return
+
+    const chan = supabase
+      .channel(`reviews-public-${sellerUserId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews', filter: `reviewed_id=eq.${sellerUserId}` }, async () => {
+        try {
+          const rows = await fetchReviews(sellerUserId)
+          setReviews(rows)
+        } catch (e) {
+          console.log(e)
+        }
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(chan)
+    }
+  }, [sellerUserId]);
 
   if (loading) {
     return (
