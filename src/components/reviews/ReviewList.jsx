@@ -88,7 +88,6 @@ export default function ReviewList({ reviews }) {
             <div className="flex items-start justify-between gap-3 mb-2">
               <div>
                 <p className="text-sm font-semibold">{review.reviewer_name || 'User'}</p>
-                <p className="text-xs text-muted-foreground capitalize">{review.role_of_reviewer}</p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {[1,2,3,4,5].map(s => (

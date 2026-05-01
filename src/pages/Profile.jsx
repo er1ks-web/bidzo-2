@@ -168,9 +168,16 @@ export default function Profile() {
 
       const rows = Array.isArray(data) ? data : []
       const now = new Date()
+      const SOLD_STATUSES = new Set(['sold', 'sold_pending', 'in_progress', 'completed'])
       return rows
         .filter(l => !l?.is_deleted)
-        .filter(l => !(l?.listing_type === 'auction' && l?.auction_end && new Date(l.auction_end) < now && !l?.is_sold && l?.status !== 'completed'))
+        .filter(l => {
+          // Hide expired auctions ONLY if they are not sold/completed.
+          if (!(l?.listing_type === 'auction' && l?.auction_end && new Date(l.auction_end) < now)) return true
+          if (l?.is_sold) return true
+          if (SOLD_STATUSES.has(l?.status)) return true
+          return false
+        })
     },
     enabled: !!user,
   });
@@ -288,6 +295,12 @@ export default function Profile() {
 
   const avatarUrl = userProfile?.profile_picture_url;
 
+  const [activeTab, setActiveTab] = useState(isMobile ? 'wallet' : 'listings');
+
+  useEffect(() => {
+    setActiveTab(isMobile ? 'wallet' : 'listings');
+  }, [isMobile]);
+
   if (!user) {
     return (
       <div className="text-center py-20 text-muted-foreground">
@@ -331,18 +344,30 @@ export default function Profile() {
             </div>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={async () => {
-            const { error } = await supabase.auth.signOut()
-            if (error) console.log(error)
-          }}
-          className="gap-2"
-        >
-          <LogOut className="w-4 h-4" />
-          {t('profile.logout')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setActiveTab('edit')}
+            className="gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Edit
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              const { error } = await supabase.auth.signOut()
+              if (error) console.log(error)
+            }}
+            className="gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            {t('profile.logout')}
+          </Button>
+        </div>
       </div>
 
       {/* Desktop: Wallet separate + Tabs */}
@@ -363,7 +388,7 @@ export default function Profile() {
 
           {/* Desktop Tabs */}
           <div className="lg:col-span-2">
-            <Tabs defaultValue={isMobile ? 'wallet' : 'listings'}>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="flex-wrap h-auto gap-1">
                 <TabsTrigger value="listings" className="gap-2">
                   <Package className="w-4 h-4" />
@@ -373,10 +398,6 @@ export default function Profile() {
                   <Gavel className="w-4 h-4" />
                   {t('profile.myBids')} ({myBids.length})
                 </TabsTrigger>
-                <TabsTrigger value="edit" className="gap-2">
-                  <Settings className="w-4 h-4" />
-                  {t('wallet.edit')} Profile
-                </TabsTrigger>
                 <TabsTrigger value="reviews" className="gap-2">
                   <Star className="w-4 h-4" />
                   {t('profile.reviews')} ({reviews.length})
@@ -384,25 +405,50 @@ export default function Profile() {
               </TabsList>
 
               <TabsContent value="listings" className="mt-6 space-y-4">
-               {myListings.length === 0 ? (
-                 <div className="text-center py-12 text-muted-foreground">{t('common.noResults')}</div>
-               ) : (
-                 <>
-                   {myListings.some(l => l.published) && (
-                     <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 flex gap-3">
-                       <AlertCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-                       <p className="text-xs text-foreground">
-                         Published listings cannot be edited. If you need to make changes, please contact support.
-                       </p>
-                     </div>
-                   )}
-                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
-                     {myListings.map((listing, i) => (
-                       <ListingCard key={listing.id} listing={listing} index={i} />
-                     ))}
-                   </div>
-                 </>
-               )}
+               {(() => {
+                 const SOLD_STATUSES = new Set(['sold', 'sold_pending', 'in_progress', 'completed']);
+                 const sold = myListings.filter(l => l?.is_sold || SOLD_STATUSES.has(l?.status));
+                 const active = myListings.filter(l => l?.status === 'active' && !l?.is_sold);
+
+                 if (sold.length === 0 && active.length === 0) {
+                   return <div className="text-center py-12 text-muted-foreground">{t('common.noResults')}</div>;
+                 }
+
+                 return (
+                   <>
+                     {myListings.some(l => l.published) && (
+                       <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 flex gap-3">
+                         <AlertCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                         <p className="text-xs text-foreground">
+                           Published listings cannot be edited. If you need to make changes, please contact support.
+                         </p>
+                       </div>
+                     )}
+
+                     {sold.length > 0 && (
+                       <div>
+                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">Sold ({sold.length})</h3>
+                         <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
+                           {sold.map((listing, i) => (
+                             <ListingCard key={listing.id} listing={listing} index={i} />
+                           ))}
+                         </div>
+                       </div>
+                     )}
+
+                     {active.length > 0 && (
+                       <div className={sold.length > 0 ? 'mt-6' : ''}>
+                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">Active ({active.length})</h3>
+                         <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
+                           {active.map((listing, i) => (
+                             <ListingCard key={listing.id} listing={listing} index={i} />
+                           ))}
+                         </div>
+                       </div>
+                     )}
+                   </>
+                 );
+               })()}
               </TabsContent>
 
               <TabsContent value="bids" className="mt-6">
@@ -476,7 +522,7 @@ export default function Profile() {
 
       {/* Mobile: Wallet as first tab */}
       {isMobile && (
-        <Tabs defaultValue="wallet">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="flex-wrap h-auto gap-1 w-full">
             <TabsTrigger value="wallet" className="gap-1.5 flex-1 text-xs sm:text-sm">
               <WalletIcon className="w-4 h-4" />
@@ -489,10 +535,6 @@ export default function Profile() {
             <TabsTrigger value="bids" className="gap-1.5 flex-1 text-xs sm:text-sm">
               <Gavel className="w-4 h-4" />
               {t('profile.myBids')} ({myBids.length})
-            </TabsTrigger>
-            <TabsTrigger value="edit" className="gap-1.5 flex-1 text-xs sm:text-sm">
-              <Settings className="w-4 h-4" />
-              {t('wallet.edit')}
             </TabsTrigger>
             <TabsTrigger value="reviews" className="gap-1.5 flex-1 text-xs sm:text-sm">
               <Star className="w-4 h-4" />
@@ -513,25 +555,50 @@ export default function Profile() {
           </TabsContent>
 
           <TabsContent value="listings" className="mt-6 space-y-4">
-            {myListings.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">{t('common.noResults')}</div>
-            ) : (
-              <>
-                {myListings.some(l => l.published) && (
-                  <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 flex gap-3">
-                    <AlertCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-                    <p className="text-xs text-foreground">
-                      Published listings cannot be edited. If you need to make changes, please contact support.
-                    </p>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-4">
-                  {myListings.map((listing, i) => (
-                    <ListingCard key={listing.id} listing={listing} index={i} />
-                  ))}
-                </div>
-              </>
-            )}
+            {(() => {
+              const SOLD_STATUSES = new Set(['sold', 'sold_pending', 'in_progress', 'completed']);
+              const sold = myListings.filter(l => l?.is_sold || SOLD_STATUSES.has(l?.status));
+              const active = myListings.filter(l => l?.status === 'active' && !l?.is_sold);
+
+              if (sold.length === 0 && active.length === 0) {
+                return <div className="text-center py-12 text-muted-foreground">{t('common.noResults')}</div>;
+              }
+
+              return (
+                <>
+                  {myListings.some(l => l.published) && (
+                    <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 flex gap-3">
+                      <AlertCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                      <p className="text-xs text-foreground">
+                        Published listings cannot be edited. If you need to make changes, please contact support.
+                      </p>
+                    </div>
+                  )}
+
+                  {sold.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">Sold ({sold.length})</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {sold.map((listing, i) => (
+                          <ListingCard key={listing.id} listing={listing} index={i} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {active.length > 0 && (
+                    <div className={sold.length > 0 ? 'mt-6' : ''}>
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">Active ({active.length})</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {active.map((listing, i) => (
+                          <ListingCard key={listing.id} listing={listing} index={i} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="bids" className="mt-6">

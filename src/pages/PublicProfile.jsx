@@ -22,6 +22,8 @@ export default function PublicProfile() {
   const [reviews, setReviews] = useState([]);
   const [sellerUserId, setSellerUserId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [soldExpanded, setSoldExpanded] = useState(false);
+  const [activeExpanded, setActiveExpanded] = useState(false);
 
   const fetchReviews = async (reviewedId) => {
     const q = supabase
@@ -235,24 +237,20 @@ export default function PublicProfile() {
 
       {/* Reviews + Sold Listings — tabbed */}
       <div className="mt-8 bg-card rounded-xl border p-4 sm:p-6">
-        <Tabs defaultValue="reviews">
+        <Tabs defaultValue="sold">
           <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
             <TabsList>
-              <TabsTrigger value="reviews" className="gap-2">
-                <Star className="w-4 h-4" />
-                Reviews ({reviews.length})
-              </TabsTrigger>
               <TabsTrigger value="sold" className="gap-2">
                 <CheckCircle2 className="w-4 h-4" />
                 Sold ({soldListings.length})
               </TabsTrigger>
+              <TabsTrigger value="reviews" className="gap-2">
+                <Star className="w-4 h-4" />
+                Reviews ({reviews.length})
+              </TabsTrigger>
             </TabsList>
             {avgRating && <StarRatingDisplay rating={avgRating} count={reviews.length} size="md" />}
           </div>
-
-          <TabsContent value="reviews">
-            <ReviewList reviews={reviews} />
-          </TabsContent>
 
           <TabsContent value="sold">
             {soldListings.length === 0 ? (
@@ -261,12 +259,30 @@ export default function PublicProfile() {
                 <p className="text-sm">No sold listings yet</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {soldListings.map((l, i) => (
+              <div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {(soldExpanded ? soldListings : soldListings.slice(0, 3)).map((l, i) => (
                   <ListingCard key={l.id} listing={l} index={i} />
-                ))}
+                  ))}
+                </div>
+
+                {soldListings.length > 3 && (
+                  <div className="flex justify-end mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setSoldExpanded(v => !v)}
+                      className="text-xs text-accent hover:underline transition-colors"
+                    >
+                      {soldExpanded ? 'See less' : 'See all'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="reviews">
+            <ReviewList reviews={reviews} />
           </TabsContent>
         </Tabs>
       </div>
@@ -279,10 +295,24 @@ export default function PublicProfile() {
           <p>No active listings</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {listings.map((l, i) => (
-            <ListingCard key={l.id} listing={l} index={i} />
-          ))}
+        <div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {(activeExpanded ? listings : listings.slice(0, 3)).map((l, i) => (
+              <ListingCard key={l.id} listing={l} index={i} />
+            ))}
+          </div>
+
+          {listings.length > 3 && (
+            <div className="flex justify-end mt-3">
+              <button
+                type="button"
+                onClick={() => setActiveExpanded(v => !v)}
+                className="text-xs text-accent hover:underline transition-colors"
+              >
+                {activeExpanded ? 'See less' : 'See all'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

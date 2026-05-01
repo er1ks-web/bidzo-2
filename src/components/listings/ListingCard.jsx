@@ -27,6 +27,7 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
   const isActive = listing.status === 'active' && !hasEnded;
   const imageUrl = listing.images?.[0] || PLACEHOLDER_IMAGES[index % 3];
   const isOwner = user?.id && listing?.seller_id && user.id === listing.seller_id;
+  const isSold = !!listing?.is_sold || ['sold', 'sold_pending', 'in_progress', 'completed'].includes(listing?.status);
 
   const displayPrice = isAuction
     ? (listing.current_bid != null ? listing.current_bid : listing.price)
@@ -65,7 +66,7 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
             {!isActive && (
               <div className="absolute inset-0 bg-foreground/50 flex items-center justify-center">
                 <span className="text-white font-bold text-lg">
-                  {listing.status === 'sold' ? t('listing.sold') : t('listing.expired')}
+                  {isSold ? t('listing.sold') : t('listing.expired')}
                 </span>
               </div>
             )}
