@@ -218,7 +218,7 @@ export default function Transactions() {
 
     const { error: listingError } = await supabase
       .from('listings')
-      .update({ status: 'completed' })
+      .update({ status: 'completed', is_sold: true })
       .eq('id', tx.listing_id)
 
     if (listingError) console.log(listingError)

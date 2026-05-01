@@ -81,16 +81,45 @@ export default function PublicProfile() {
 
         const [allListingsRes, reviewsRes] = await Promise.all([
           (async () => {
-            if (!sellerUserId) return []
-            const { data, error } = await supabase
-              .from('listings')
-              .select('*')
-              .eq('seller_id', sellerUserId)
-              .order('created_at', { ascending: false })
-              .limit(100)
+            if (!sellerUserId && !sellerEmail) return []
 
-            if (error) console.log(error)
-            return Array.isArray(data) ? data : []
+            const [byIdRes, byEmailRes] = await Promise.all([
+              sellerUserId
+                ? supabase
+                    .from('listings')
+                    .select('*')
+                    .eq('seller_id', sellerUserId)
+                    .order('created_at', { ascending: false })
+                    .limit(100)
+                : Promise.resolve({ data: [], error: null }),
+              sellerEmail
+                ? supabase
+                    .from('listings')
+                    .select('*')
+                    .eq('seller_email', sellerEmail)
+                    .order('created_at', { ascending: false })
+                    .limit(100)
+                : Promise.resolve({ data: [], error: null }),
+            ])
+
+            if (byIdRes?.error) console.log(byIdRes.error)
+            if (byEmailRes?.error) console.log(byEmailRes.error)
+
+            const rows = [
+              ...(Array.isArray(byIdRes?.data) ? byIdRes.data : []),
+              ...(Array.isArray(byEmailRes?.data) ? byEmailRes.data : []),
+            ]
+
+            const byListingId = new Map()
+            for (const r of rows) {
+              if (r?.id) byListingId.set(r.id, r)
+            }
+
+            return [...byListingId.values()].sort((a, b) => {
+              const da = a?.created_at ? new Date(a.created_at).getTime() : 0
+              const db = b?.created_at ? new Date(b.created_at).getTime() : 0
+              return db - da
+            })
           })(),
           fetchReviews(sellerUserId),
         ])
