@@ -8,12 +8,25 @@ import StarRatingInput from './StarRatingInput';
 
 const BUCKET_NAME = 'review-images'
 
-export default function ReviewForm({ transaction, currentUser, targetEmail, targetName, roleOfReviewer, existingReview, onReviewSubmitted }) {
+export default function ReviewForm({ transaction, currentUser, targetId, targetEmail, targetName, roleOfReviewer, existingReview, onReviewSubmitted }) {
   const [rating, setRating] = useState(0);
   const [text, setText] = useState('');
   const [images, setImages] = useState([]); // { file, previewUrl }
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef(null);
+
+  let existingImages = []
+  try {
+    if (existingReview?.images) {
+      if (Array.isArray(existingReview.images)) existingImages = existingReview.images
+      else if (typeof existingReview.images === 'string') {
+        const val = JSON.parse(existingReview.images)
+        if (Array.isArray(val)) existingImages = val
+      }
+    }
+  } catch (e) {
+    existingImages = []
+  }
 
   if (existingReview) {
     return (
@@ -30,9 +43,9 @@ export default function ReviewForm({ transaction, currentUser, targetEmail, targ
         {existingReview.review_text && (
           <p className="text-sm text-muted-foreground italic">"{existingReview.review_text}"</p>
         )}
-        {existingReview.images?.length > 0 && (
+        {existingImages?.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
-            {existingReview.images.map((url, i) => (
+            {existingImages.map((url, i) => (
               <img key={i} src={url} alt="" className="w-16 h-16 rounded-lg object-cover border border-border" />
             ))}
           </div>
@@ -101,13 +114,12 @@ export default function ReviewForm({ transaction, currentUser, targetEmail, targ
         .insert({
           transaction_id: transaction.id,
           listing_id: transaction.listing_id,
-          reviewer_email: currentUser.email,
-          reviewer_name: currentUser.full_name,
-          reviewed_email: targetEmail,
+          reviewer_id: currentUser.id,
+          reviewed_id: targetId,
           role_of_reviewer: roleOfReviewer,
           rating,
           review_text: text.trim() || null,
-          images: uploadedUrls.length > 0 ? uploadedUrls : null,
+          images: uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : null,
         })
 
       if (error) console.log(error)

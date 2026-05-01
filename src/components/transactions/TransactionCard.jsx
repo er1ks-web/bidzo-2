@@ -24,6 +24,9 @@ export default function TransactionCard({ transaction, currentUserEmail, onConfi
   const StatusIcon = cfg.icon;
   const isCompleted = transaction.status === 'completed';
 
+  const currentUserId = isBuyer ? transaction.buyer_id : transaction.seller_id;
+  const otherPartyId = isBuyer ? transaction.seller_id : transaction.buyer_id;
+
   const bothConfirmed = transaction.buyer_confirmed && transaction.seller_confirmed;
   const canBuyerConfirm = isBuyer && !transaction.buyer_confirmed && !isCompleted && transaction.status !== 'cancelled';
   const canSellerConfirm = isSeller && !transaction.seller_confirmed && !isCompleted && transaction.status !== 'cancelled';
@@ -37,24 +40,43 @@ export default function TransactionCard({ transaction, currentUserEmail, onConfi
   const queryClient = useQueryClient();
 
   const { data: existingReview } = useQuery({
-    queryKey: ['my-review', transaction.id, currentUserEmail],
+    queryKey: ['my-review', transaction.id, currentUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('reviews')
         .select('*')
         .eq('transaction_id', transaction.id)
-        .eq('reviewer_email', currentUserEmail)
+        .eq('reviewer_id', currentUserId)
         .limit(1)
 
       if (error) console.log(error)
-      return Array.isArray(data) ? (data[0] || null) : null
+      const row = Array.isArray(data) ? (data[0] || null) : null
+      if (!row) return null
+
+      let parsedImages = []
+      try {
+        if (typeof row.images === 'string' && row.images.trim()) {
+          const val = JSON.parse(row.images)
+          if (Array.isArray(val)) parsedImages = val
+        } else if (Array.isArray(row.images)) {
+          parsedImages = row.images
+        }
+      } catch (e) {
+        parsedImages = []
+      }
+
+      return {
+        ...row,
+        images: parsedImages,
+        created_date: row.created_date || row.created_at,
+      }
     },
     enabled: isCompleted && (isBuyer || isSeller),
   });
 
   const handleReviewSubmitted = () => {
-    queryClient.invalidateQueries({ queryKey: ['my-review', transaction.id, currentUserEmail] });
-    queryClient.invalidateQueries({ queryKey: ['user-rating', otherPartyEmail] });
+    queryClient.invalidateQueries({ queryKey: ['my-review', transaction.id, currentUserId] });
+    queryClient.invalidateQueries({ queryKey: ['user-rating', otherPartyId] });
   };
 
   return (
@@ -196,7 +218,8 @@ export default function TransactionCard({ transaction, currentUserEmail, onConfi
           </div>
           <ReviewForm
             transaction={transaction}
-            currentUser={{ email: currentUserEmail, full_name: isBuyer ? transaction.buyer_name : transaction.seller_name }}
+            currentUser={{ id: currentUserId, email: currentUserEmail, full_name: isBuyer ? transaction.buyer_name : transaction.seller_name }}
+            targetId={otherPartyId}
             targetEmail={otherPartyEmail}
             targetName={otherPartyName}
             roleOfReviewer={roleOfReviewer}

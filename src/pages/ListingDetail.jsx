@@ -213,7 +213,7 @@ export default function ListingDetail() {
 
   const sellerEmail = sellerProfile?.email || null
   const sellerName = listing?.seller_name || sellerProfile?.full_name || (sellerEmail ? sellerEmail.split('@')[0] : null)
-  const { data: sellerRating } = useUserRating(sellerEmail);
+  const { data: sellerRating } = useUserRating(listing?.seller_id || sellerProfile?.id || null);
   const hasEnded = isAuction && listing?.auction_end && new Date(listing.auction_end) < new Date();
   const isSoldPending = ['sold_pending', 'in_progress', 'completed'].includes(listing?.status);
   const isWinner = user?.email === listing?.highest_bidder;

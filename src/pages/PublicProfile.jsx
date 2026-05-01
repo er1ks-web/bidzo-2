@@ -54,10 +54,41 @@ export default function PublicProfile() {
               .order('created_at', { ascending: false })
               .limit(50)
 
-            if (!sellerEmail) return []
-            const { data, error } = await q.eq('reviewed_email', sellerEmail)
+            if (!sellerUserId) return []
+            const { data, error } = await q.eq('reviewed_id', sellerUserId)
             if (error) console.log(error)
-            return Array.isArray(data) ? data : []
+            const rows = Array.isArray(data) ? data : []
+
+            const reviewerIds = [...new Set(rows.map(r => r.reviewer_id).filter(Boolean))]
+            const { data: reviewerProfiles, error: reviewerErr } = reviewerIds.length
+              ? await supabase
+                .from('profiles')
+                .select('id, email, username, full_name')
+                .in('id', reviewerIds)
+              : { data: [], error: null }
+
+            if (reviewerErr) console.log(reviewerErr)
+            const profileById = new Map((Array.isArray(reviewerProfiles) ? reviewerProfiles : []).map(p => [p.id, p]))
+
+            return rows.map(r => {
+              const p = r?.reviewer_id ? profileById.get(r.reviewer_id) : null
+              let parsedImages = []
+              try {
+                if (typeof r.images === 'string' && r.images.trim()) {
+                  const val = JSON.parse(r.images)
+                  if (Array.isArray(val)) parsedImages = val
+                }
+              } catch (e) {
+                parsedImages = []
+              }
+
+              return {
+                ...r,
+                reviewer_name: p?.username || p?.full_name || (p?.email ? p.email.split('@')[0] : null),
+                images: parsedImages,
+                created_date: r.created_date || r.created_at,
+              }
+            })
           })(),
         ])
 
