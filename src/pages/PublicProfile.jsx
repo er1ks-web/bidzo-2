@@ -39,7 +39,7 @@ export default function PublicProfile() {
     const { data: reviewerProfiles, error: reviewerErr } = reviewerIds.length
       ? await supabase
         .from('profiles')
-        .select('id, email, username, full_name')
+        .select('id, email, username')
         .in('id', reviewerIds)
       : { data: [], error: null }
 
@@ -60,7 +60,7 @@ export default function PublicProfile() {
 
       return {
         ...r,
-        reviewer_name: p?.username || p?.full_name || (p?.email ? p.email.split('@')[0] : null),
+        reviewer_name: p?.username || (p?.email ? p.email.split('@')[0] : null),
         images: parsedImages,
         created_date: r.created_date || r.created_at,
       }
@@ -77,38 +77,21 @@ export default function PublicProfile() {
         const profileRes = Array.isArray(profileData) ? (profileData[0] || null) : null
 
         const sellerUserId = isUuid ? sellerId : (profileRes?.id || null)
-        const sellerEmail = profileRes?.email || (sellerId.includes('@') ? sellerId : null)
 
         const [allListingsRes, reviewsRes] = await Promise.all([
           (async () => {
-            if (!sellerUserId && !sellerEmail) return []
+            if (!sellerUserId) return []
 
-            const [byIdRes, byEmailRes] = await Promise.all([
-              sellerUserId
-                ? supabase
-                    .from('listings')
-                    .select('*')
-                    .eq('seller_id', sellerUserId)
-                    .order('created_at', { ascending: false })
-                    .limit(100)
-                : Promise.resolve({ data: [], error: null }),
-              sellerEmail
-                ? supabase
-                    .from('listings')
-                    .select('*')
-                    .eq('seller_email', sellerEmail)
-                    .order('created_at', { ascending: false })
-                    .limit(100)
-                : Promise.resolve({ data: [], error: null }),
-            ])
+            const byIdRes = await supabase
+              .from('listings')
+              .select('*')
+              .eq('seller_id', sellerUserId)
+              .order('created_at', { ascending: false })
+              .limit(100)
 
             if (byIdRes?.error) console.log(byIdRes.error)
-            if (byEmailRes?.error) console.log(byEmailRes.error)
 
-            const rows = [
-              ...(Array.isArray(byIdRes?.data) ? byIdRes.data : []),
-              ...(Array.isArray(byEmailRes?.data) ? byEmailRes.data : []),
-            ]
+            const rows = Array.isArray(byIdRes?.data) ? byIdRes.data : []
 
             const byListingId = new Map()
             for (const r of rows) {
@@ -179,7 +162,10 @@ export default function PublicProfile() {
     );
   }
 
-  const displayName = profile?.username || (profile?.email ? profile.email.split('@')[0] : null) || (sellerId.includes('@') ? sellerId.split('@')[0] : 'User');
+  const displayName =
+    profile?.username ||
+    (profile?.email ? profile.email.split('@')[0] : null) ||
+    (typeof sellerId === 'string' && sellerId.includes('@') ? sellerId.split('@')[0] : 'User');
   const memberSince = (profile?.created_at || profile?.created_date)
     ? format(new Date(profile.created_at || profile.created_date), 'MMMM yyyy')
     : null;

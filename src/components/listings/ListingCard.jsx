@@ -19,13 +19,14 @@ const PLACEHOLDER_IMAGES = [
   'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&h=300&fit=crop',
 ];
 
-export default function ListingCard({ listing, index = 0, user = null }) {
+export default function ListingCard({ listing, index = 0, user = null, onDelete = null, showDelete = false }) {
   const { t } = useI18n();
+  
   const isAuction = listing.listing_type === 'auction';
   const hasEnded = isAuction && listing.auction_end && new Date(listing.auction_end) < new Date();
   const isActive = listing.status === 'active' && !hasEnded;
   const imageUrl = listing.images?.[0] || PLACEHOLDER_IMAGES[index % 3];
-  const isOwner = user?.email === listing.seller_email;
+  const isOwner = user?.id && listing?.seller_id && user.id === listing.seller_id;
 
   const displayPrice = isAuction
     ? (listing.current_bid != null ? listing.current_bid : listing.price)
@@ -104,15 +105,15 @@ export default function ListingCard({ listing, index = 0, user = null }) {
               </div>
             )}
 
-            {listing.seller_email && (
+            {listing.seller_id && (
               <div className="mt-2 pt-2 border-t border-border/50">
                 <Link
-                  to={`/seller/${encodeURIComponent(listing.seller_email)}`}
+                  to={`/seller/${encodeURIComponent(listing.seller_id)}`}
                   onClick={(e) => e.stopPropagation()}
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
                 >
                   <User className="w-3 h-3" />
-                  <span className="truncate">{listing.seller_name || listing.seller_email.split('@')[0]}</span>
+                  <span className="truncate">{listing.seller_name || t('profile.seller') || 'Seller'}</span>
                 </Link>
               </div>
             )}

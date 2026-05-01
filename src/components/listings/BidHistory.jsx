@@ -15,9 +15,7 @@ export default function BidHistory({ bids, currentUserEmail, currentUserId }) {
   }
 
   // Find the latest bid by the current user
-  const userLatestBidId = currentUserEmail
-    ? bids.find(b => b.bidder_email === currentUserEmail)?.id
-    : currentUserId
+  const userLatestBidId = currentUserId
     ? bids.find(b => b.bidder_id === currentUserId)?.id
     : null;
 

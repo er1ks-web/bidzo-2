@@ -212,14 +212,14 @@ export default function ListingDetail() {
   });
 
   const sellerEmail = sellerProfile?.email || null
-  const sellerName = listing?.seller_name || sellerProfile?.full_name || (sellerEmail ? sellerEmail.split('@')[0] : null)
+  const sellerName = listing?.seller_name || sellerProfile?.username || (sellerEmail ? sellerEmail.split('@')[0] : null)
   const { data: sellerRating } = useUserRating(listing?.seller_id || sellerProfile?.id || null);
   const hasEnded = isAuction && listing?.auction_end && new Date(listing.auction_end) < new Date();
   const isSoldPending = ['sold_pending', 'in_progress', 'completed'].includes(listing?.status);
   const isWinner = user?.email === listing?.highest_bidder;
 
   const topBid = Array.isArray(bids) ? (bids[0] || null) : null
-  const highestBidderFallback = listing?.highest_bidder || topBid?.bidder_email || topBid?.bidder_id || null
+  const highestBidderFallback = listing?.highest_bidder || topBid?.bidder_id || null
   const highestBidderNameFallback = listing?.highest_bidder_name || topBid?.bidder_name || null
   const currentBidFallback = listing?.current_bid || topBid?.amount || null
 
@@ -500,7 +500,7 @@ export default function ListingDetail() {
           <div className="bg-card rounded-xl border p-4 sm:p-5">
             <p className="text-sm text-muted-foreground mb-3">{t('listing.seller')}</p>
             <Link
-              to={`/seller/${encodeURIComponent(listing.seller_id || listing.seller_email)}`}
+              to={`/seller/${encodeURIComponent(listing.seller_id)}`}
               className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">

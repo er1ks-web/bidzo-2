@@ -181,7 +181,7 @@ export default function Profile() {
       const { data, error } = await supabase
         .from('bids')
         .select('*')
-        .eq('bidder_email', user.email)
+        .eq('bidder_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50)
 
@@ -211,7 +211,7 @@ export default function Profile() {
       const { data: reviewerProfiles, error: reviewerErr } = reviewerIds.length
         ? await supabase
           .from('profiles')
-          .select('id, email, username, full_name')
+          .select('id, email, username')
           .in('id', reviewerIds)
         : { data: [], error: null }
 
@@ -232,7 +232,7 @@ export default function Profile() {
 
         return {
           ...r,
-          reviewer_name: p?.username || p?.full_name || (p?.email ? p.email.split('@')[0] : null),
+          reviewer_name: p?.username || (p?.email ? p.email.split('@')[0] : null),
           images: parsedImages,
           created_date: r.created_date || r.created_at,
         }
