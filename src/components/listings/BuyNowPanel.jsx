@@ -60,19 +60,12 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
         .from('auction_transactions')
         .insert({
           listing_id: listing.id,
-          listing_title: listing.title,
-          listing_image: listing.images?.[0] || '',
           seller_id: sellerId,
-          seller_email: listing.seller_email,
-          seller_name: listing.seller_name,
           buyer_id: buyerId,
-          buyer_email: user.email,
-          buyer_name: user.full_name,
           winning_amount: listing.buy_now_price,
           status: 'sold_pending',
           buyer_confirmed: false,
           seller_confirmed: false,
-          conversation_id: [user.email, listing.seller_email].sort().join('_'),
         })
 
       if (txErr) {

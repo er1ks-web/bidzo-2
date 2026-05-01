@@ -287,19 +287,12 @@ export default function ListingDetail() {
         .from('auction_transactions')
         .insert({
           listing_id: listing.id,
-          listing_title: listing.title,
-          listing_image: listing.images?.[0] || '',
           seller_id: sellerId,
-          seller_email: sellerEmail,
-          seller_name: sellerName,
           buyer_id: buyerId,
-          buyer_email: user.email,
-          buyer_name: user.full_name,
           winning_amount: listing.price,
           status: 'sold_pending',
           buyer_confirmed: false,
           seller_confirmed: false,
-          conversation_id: sellerEmail ? [user.email, sellerEmail].sort().join('_') : null,
         })
 
       if (txErr) {
