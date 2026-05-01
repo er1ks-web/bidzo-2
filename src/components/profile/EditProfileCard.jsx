@@ -7,6 +7,8 @@ import { Camera, User, Save, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+const AVATAR_BUCKET = 'profile-avatars'
+
 const LABELS = {
   lv: {
     title: 'Personīgā informācija',
@@ -88,9 +90,11 @@ export default function EditProfileCard({ user, profile, lang, onProfileSaved })
       const filePath = `avatars/${user?.id || 'user'}-${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`
 
       const { error: uploadError } = await supabase.storage
-        .from('listing-images')
+        .from(AVATAR_BUCKET)
         .upload(filePath, file, {
           contentType: file.type || 'image/jpeg',
+          cacheControl: '3600',
+          upsert: true,
         })
 
       if (uploadError) {
@@ -100,7 +104,7 @@ export default function EditProfileCard({ user, profile, lang, onProfileSaved })
       }
 
       const { data: publicData } = supabase.storage
-        .from('listing-images')
+        .from(AVATAR_BUCKET)
         .getPublicUrl(filePath)
 
       setForm(f => ({ ...f, profile_picture_url: publicData?.publicUrl || '' }));
