@@ -167,7 +167,7 @@ export default function Profile() {
       if (error) console.log(error)
 
       const rows = Array.isArray(data) ? data : []
-      return rows
+      return rows.filter(l => !l?.is_deleted)
     },
     enabled: !!user,
   });

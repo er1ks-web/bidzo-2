@@ -258,12 +258,17 @@ export default function ListingDetail() {
         .from('listings')
         .update({ is_deleted: true })
         .eq('id', listing.id)
+        .eq('seller_id', user?.id)
 
-      if (error) console.log(error)
+      if (error) {
+        console.log(error)
+        throw error
+      }
+
       toast.success('Listing deleted');
       setTimeout(() => navigate('/profile'), 500);
     } catch (err) {
-      toast.error('Failed to delete listing');
+      toast.error(err?.message || 'Failed to delete listing');
       console.error(err);
     } finally {
       setDeletingListing(false);
