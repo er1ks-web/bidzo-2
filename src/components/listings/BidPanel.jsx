@@ -97,6 +97,28 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
       }
     }
 
+    // Re-check listing availability to prevent bidding on stale UIs
+    try {
+      const { data: listingRows, error: listingError } = await supabase
+        .from('listings')
+        .select('status, is_sold, auction_end')
+        .eq('id', listing.id)
+        .limit(1)
+
+      if (listingError) console.log(listingError)
+      const latest = Array.isArray(listingRows) ? (listingRows[0] || null) : null
+      const latestHasEnded = !!(latest?.auction_end && new Date(latest.auction_end) < new Date())
+
+      if (!latest || latest?.is_sold || latest?.status !== 'active' || latestHasEnded) {
+        toast.error('This listing is no longer available for bidding.')
+        return
+      }
+    } catch (e) {
+      console.log(e)
+      toast.error('Could not verify listing availability. Please try again.')
+      return
+    }
+
     setIsSubmitting(true);
     setValidationError('');
 

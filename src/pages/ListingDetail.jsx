@@ -216,12 +216,18 @@ export default function ListingDetail() {
   const { data: sellerRating } = useUserRating(listing?.seller_id || sellerProfile?.id || null);
   const hasEnded = isAuction && listing?.auction_end && new Date(listing.auction_end) < new Date();
   const isSoldPending = ['sold_pending', 'in_progress', 'completed'].includes(listing?.status);
-  const isWinner = user?.email === listing?.highest_bidder;
 
   const topBid = Array.isArray(bids) ? (bids[0] || null) : null
   const highestBidderFallback = listing?.highest_bidder || topBid?.bidder_id || null
   const highestBidderNameFallback = listing?.highest_bidder_name || topBid?.bidder_name || null
   const currentBidFallback = listing?.current_bid || topBid?.amount || null
+
+  const isEndedOrInDeal = !!(hasEnded || isSoldPending)
+  const isWinner = !!(
+    user?.id && highestBidderFallback && user.id === highestBidderFallback
+  ) || !!(
+    user?.email && highestBidderFallback && user.email === highestBidderFallback
+  )
 
   const handleContact = () => {
     if (!user) {
@@ -448,7 +454,7 @@ export default function ListingDetail() {
           </div>
 
           {/* Post-auction banner */}
-          {isSoldPending && (
+          {isEndedOrInDeal && (
             <div className={cn(
               'rounded-xl border p-4 space-y-3',
               listing.status === 'completed' ? 'bg-green-500/10 border-green-500/30' : 'bg-accent/10 border-accent/30'
@@ -461,10 +467,10 @@ export default function ListingDetail() {
                   {listing.status === 'completed' ? 'Deal Completed!' : 'Auction Ended — Deal in Progress'}
                 </p>
               </div>
-              {listing.highest_bidder_name && (
+              {highestBidderNameFallback && (
                 <p className="text-sm text-muted-foreground">
-                  Winner: <span className="text-foreground font-medium">{listing.highest_bidder_name}</span>
-                  {' '}· €{listing.current_bid?.toFixed(2)}
+                  Winner: <span className="text-foreground font-medium">{highestBidderNameFallback}</span>
+                  {' '}· €{(currentBidFallback != null ? currentBidFallback : listing.current_bid)?.toFixed(2)}
                 </p>
               )}
               {(isWinner || isOwner) && listing.status !== 'completed' && (
