@@ -51,6 +51,9 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
       const latestUnavailable = !latest || latest?.is_sold || latest?.status !== 'active' || latestHasEnded
       if (latestUnavailable) {
         toast.error('This listing is no longer available.')
+
+        queryClient.invalidateQueries({ queryKey: ['listing', listing.id] })
+        queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
         return
       }
 
@@ -64,6 +67,16 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
       if (existingTxError) console.log(existingTxError)
       if (Array.isArray(existingTx) && existingTx[0]) {
         toast.error('This listing has already been purchased.')
+
+        queryClient.setQueryData(['listing', listing.id], (prev) => {
+          if (!prev || typeof prev !== 'object') return prev
+          return {
+            ...prev,
+            status: 'sold_pending',
+          }
+        })
+        queryClient.invalidateQueries({ queryKey: ['listing', listing.id] })
+        queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
         return
       }
 

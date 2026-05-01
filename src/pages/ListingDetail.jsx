@@ -271,6 +271,9 @@ export default function ListingDetail() {
       const latestUnavailable = !latest || latest?.is_sold || latest?.status !== 'active' || latestHasEnded
       if (latestUnavailable) {
         toast.error('This listing is no longer available.')
+
+        queryClient.invalidateQueries({ queryKey: ['listing', listingId] })
+        queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
         return
       }
 
@@ -284,6 +287,9 @@ export default function ListingDetail() {
       if (existingTxError) console.log(existingTxError)
       if (Array.isArray(existingTx) && existingTx[0]) {
         toast.error('This listing has already been purchased.')
+
+        queryClient.invalidateQueries({ queryKey: ['listing', listingId] })
+        queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
         return
       }
 
@@ -357,6 +363,7 @@ export default function ListingDetail() {
         }
       })
       queryClient.invalidateQueries({ queryKey: ['listing', listingId] })
+      queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
     } catch (e) {
       console.log(e)
       toast.error('Something went wrong. Please try again.')
