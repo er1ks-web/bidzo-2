@@ -241,14 +241,79 @@ export default function ListingDetail() {
       requireLogin('Log in to complete your purchase');
       return;
     }
-    const { error } = await supabase
-      .from('listings')
-      .update({ status: 'sold', highest_bidder: user.email, highest_bidder_name: user.full_name })
-      .eq('id', listing.id)
 
-    if (error) console.log(error)
-    toast.success('Purchase confirmed!');
-    queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
+    try {
+      const now = new Date().toISOString()
+      const buyerId = user?.id
+      const sellerId = listing?.seller_id
+
+      if (!buyerId || !sellerId) {
+        toast.error('Missing buyer or seller info')
+        return
+      }
+
+      const { data: sellerProfiles, error: sellerErr } = await supabase
+        .from('profiles')
+        .select('id, email, username, full_name')
+        .eq('id', sellerId)
+        .limit(1)
+
+      if (sellerErr) console.log(sellerErr)
+      const sellerProfile = Array.isArray(sellerProfiles) ? (sellerProfiles[0] || null) : null
+      const sellerEmail = listing?.seller_email || sellerProfile?.email || null
+      const sellerName = listing?.seller_name || sellerProfile?.username || sellerProfile?.full_name || (sellerEmail ? sellerEmail.split('@')[0] : null)
+
+      // 1) Mark listing as sold_pending (awaiting confirmations)
+      const { error: listingErr } = await supabase
+        .from('listings')
+        .update({
+          status: 'sold_pending',
+          is_sold: false,
+          highest_bidder: user.email,
+          highest_bidder_name: user.full_name,
+          current_bid: listing.price,
+          auction_end: now,
+        })
+        .eq('id', listing.id)
+
+      if (listingErr) {
+        console.log(listingErr)
+        toast.error('Could not complete purchase. Please try again.')
+        return
+      }
+
+      // 2) Create deal record so it shows up in Deals/Transactions
+      const { error: txErr } = await supabase
+        .from('auction_transactions')
+        .insert({
+          listing_id: listing.id,
+          listing_title: listing.title,
+          listing_image: listing.images?.[0] || '',
+          seller_id: sellerId,
+          seller_email: sellerEmail,
+          seller_name: sellerName,
+          buyer_id: buyerId,
+          buyer_email: user.email,
+          buyer_name: user.full_name,
+          winning_amount: listing.price,
+          status: 'sold_pending',
+          buyer_confirmed: false,
+          seller_confirmed: false,
+          conversation_id: sellerEmail ? [user.email, sellerEmail].sort().join('_') : null,
+        })
+
+      if (txErr) {
+        console.log(txErr)
+        toast.error('Purchase created, but deal record failed. Please contact support.')
+        return
+      }
+
+      toast.success('Purchase confirmed! Check your Transaction Room.')
+      queryClient.invalidateQueries({ queryKey: ['listing', listingId] })
+    } catch (e) {
+      console.log(e)
+      toast.error('Something went wrong. Please try again.')
+    }
   };
 
   const handleDeleteListing = async () => {

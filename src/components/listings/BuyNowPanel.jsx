@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/supabase'
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Zap } from 'lucide-react';
@@ -29,47 +29,62 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
     try {
       const now = new Date().toISOString();
 
+      const buyerId = user?.id
+      const sellerId = listing?.seller_id
+      if (!buyerId || !sellerId) {
+        toast.error('Missing buyer or seller info')
+        return
+      }
+
       // 1. Close the auction — mark as sold_pending with buyer as winner
-      await base44.entities.Listing.update(listing.id, {
-        status: 'sold_pending',
-        highest_bidder: user.email,
-        highest_bidder_name: user.full_name,
-        current_bid: listing.buy_now_price,
-        auction_end: now,
-      });
+      const { error: listingErr } = await supabase
+        .from('listings')
+        .update({
+          status: 'sold_pending',
+          is_sold: false,
+          highest_bidder: user.email,
+          highest_bidder_name: user.full_name,
+          current_bid: listing.buy_now_price,
+          auction_end: now,
+        })
+        .eq('id', listing.id)
+
+      if (listingErr) {
+        console.log(listingErr)
+        toast.error('Could not complete Buy Now. Please try again.')
+        return
+      }
 
       // 2. Create AuctionTransaction record
-      await base44.entities.AuctionTransaction.create({
-        listing_id: listing.id,
-        listing_title: listing.title,
-        listing_image: listing.images?.[0] || '',
-        seller_email: listing.seller_email,
-        seller_name: listing.seller_name,
-        buyer_email: user.email,
-        buyer_name: user.full_name,
-        winning_amount: listing.buy_now_price,
-        status: 'sold_pending',
-        buyer_confirmed: false,
-        seller_confirmed: false,
-      });
+      const { error: txErr } = await supabase
+        .from('auction_transactions')
+        .insert({
+          listing_id: listing.id,
+          listing_title: listing.title,
+          listing_image: listing.images?.[0] || '',
+          seller_id: sellerId,
+          seller_email: listing.seller_email,
+          seller_name: listing.seller_name,
+          buyer_id: buyerId,
+          buyer_email: user.email,
+          buyer_name: user.full_name,
+          winning_amount: listing.buy_now_price,
+          status: 'sold_pending',
+          buyer_confirmed: false,
+          seller_confirmed: false,
+          conversation_id: [user.email, listing.seller_email].sort().join('_'),
+        })
 
-      // 3. Email buyer
-      await base44.integrations.Core.SendEmail({
-        to: user.email,
-        subject: `You bought "${listing.title}" instantly!`,
-        body: `Hi ${user.full_name},\n\nYou used Buy Now to purchase "${listing.title}" for €${listing.buy_now_price?.toFixed(2)}.\n\nPlease visit your Transaction Room to confirm and complete the deal.\n\nBidzo`,
-      }).catch(() => {});
-
-      // 4. Email seller
-      await base44.integrations.Core.SendEmail({
-        to: listing.seller_email,
-        subject: `Your item "${listing.title}" was bought instantly!`,
-        body: `Hi ${listing.seller_name},\n\n${user.full_name} used Buy Now to purchase "${listing.title}" for €${listing.buy_now_price?.toFixed(2)}.\n\nPlease visit your Transaction Room to confirm the sale.\n\nBidzo`,
-      }).catch(() => {});
+      if (txErr) {
+        console.log(txErr)
+        toast.error('Purchase created, but deal record failed. Please contact support.')
+        return
+      }
 
       toast.success('Purchase confirmed! Check your Transaction Room.');
       onSuccess?.();
     } catch (err) {
+      console.log(err)
       toast.error('Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/supabase'
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -40,24 +40,25 @@ export default function SellerFeedbackModal({ isOpen, onClose, transaction, onSu
 
     setIsSubmitting(true);
     try {
-      await base44.entities.AuctionTransaction.update(transaction.id, {
-        seller_feedback_outcome: selectedOutcome,
-        feedback_submitted_at: new Date().toISOString()
-      });
+      const { error } = await supabase
+        .from('auction_transactions')
+        .update({
+          seller_feedback_outcome: selectedOutcome,
+          feedback_submitted_at: new Date().toISOString(),
+        })
+        .eq('id', transaction.id)
 
-      // If unresponsive or backed out, trigger buyer accountability check
-      if (selectedOutcome !== 'completed') {
-        await base44.functions.invoke('recordBuyerComplaint', {
-          buyer_email: transaction.buyer_email,
-          transaction_id: transaction.id,
-          outcome: selectedOutcome
-        });
+      if (error) {
+        console.log(error)
+        toast.error('Failed to record feedback')
+        return
       }
 
       toast.success('Feedback recorded');
       onSuccess();
       onClose();
     } catch (error) {
+      console.log(error)
       toast.error('Failed to record feedback');
     } finally {
       setIsSubmitting(false);
