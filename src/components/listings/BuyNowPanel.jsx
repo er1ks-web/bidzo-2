@@ -89,6 +89,8 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
         }
       })
 
+      queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
+
       toast.success('Purchase confirmed! Check your Transaction Room.');
       onSuccess?.();
     } catch (err) {

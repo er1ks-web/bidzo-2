@@ -53,12 +53,25 @@ export default function Transactions() {
     const profileRows = Array.isArray(profiles) ? profiles : []
     const profileById = new Map(profileRows.map(p => [p.id, p]))
 
+    const listingIds = [...new Set(rows.map(r => r.listing_id).filter(Boolean))]
+    const { data: listings, error: listingsError } = await supabase
+      .from('listings')
+      .select('*')
+      .in('id', listingIds)
+
+    if (listingsError) console.log(listingsError)
+    const listingRows = Array.isArray(listings) ? listings : []
+    const listingById = new Map(listingRows.map(l => [l.id, l]))
+
     return rows.map((tx) => {
       const buyer = profileById.get(tx.buyer_id)
       const seller = profileById.get(tx.seller_id)
+      const listing = listingById.get(tx.listing_id)
 
       return {
         ...tx,
+        listing_title: listing?.title || tx.listing_title || null,
+        listing_image: (Array.isArray(listing?.images) ? listing.images[0] : null) || tx.listing_image || '',
         buyer_email: buyer?.email || null,
         seller_email: seller?.email || null,
         buyer_name: buyer?.username || buyer?.full_name || (buyer?.email ? buyer.email.split('@')[0] : null),
