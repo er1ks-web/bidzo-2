@@ -97,9 +97,11 @@ export default function PublicProfile() {
 
         const now = new Date()
         const visibleListings = (allListingsRes || []).filter(l => !l?.is_deleted)
-        const soldRes = visibleListings.filter(l => l?.is_sold || l?.status === 'completed')
+        const SOLD_STATUSES = new Set(['sold', 'sold_pending', 'in_progress', 'completed'])
+
+        const soldRes = visibleListings.filter(l => l?.is_sold || SOLD_STATUSES.has(l?.status))
         const activeRes = visibleListings
-          .filter(l => !l?.is_sold && l?.status !== 'completed')
+          .filter(l => l?.status === 'active' && !l?.is_sold)
           .filter(l => !(l?.listing_type === 'auction' && l?.auction_end && new Date(l.auction_end) < now))
 
         setProfile(profileRes || null);
