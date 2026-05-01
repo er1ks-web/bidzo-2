@@ -22,8 +22,8 @@ const PLACEHOLDER_IMAGES = [
 export default function ListingCard({ listing, index = 0, user = null }) {
   const { t } = useI18n();
   const isAuction = listing.listing_type === 'auction';
-  const isActive = listing.status === 'active';
   const hasEnded = isAuction && listing.auction_end && new Date(listing.auction_end) < new Date();
+  const isActive = listing.status === 'active' && !hasEnded;
   const imageUrl = listing.images?.[0] || PLACEHOLDER_IMAGES[index % 3];
   const isOwner = user?.email === listing.seller_email;
 

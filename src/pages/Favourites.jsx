@@ -67,7 +67,10 @@ export default function Favourites() {
 
       if (error) console.log(error)
       const rows = Array.isArray(data) ? data : []
-      return rows.filter(l => l && !l.is_deleted);
+      const now = new Date()
+      return rows
+        .filter(l => l && !l.is_deleted)
+        .filter(l => !(l?.listing_type === 'auction' && l?.auction_end && new Date(l.auction_end) < now));
     },
     enabled: watches.length > 0,
   });

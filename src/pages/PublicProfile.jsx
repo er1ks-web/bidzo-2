@@ -95,9 +95,12 @@ export default function PublicProfile() {
           fetchReviews(sellerUserId),
         ])
 
+        const now = new Date()
         const visibleListings = (allListingsRes || []).filter(l => !l?.is_deleted)
-        const activeRes = visibleListings.filter(l => !l?.is_sold && l?.status !== 'completed')
         const soldRes = visibleListings.filter(l => l?.is_sold || l?.status === 'completed')
+        const activeRes = visibleListings
+          .filter(l => !l?.is_sold && l?.status !== 'completed')
+          .filter(l => !(l?.listing_type === 'auction' && l?.auction_end && new Date(l.auction_end) < now))
 
         setProfile(profileRes || null);
         setListings(activeRes || []);

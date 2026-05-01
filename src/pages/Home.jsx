@@ -37,15 +37,22 @@ export default function Home() {
     }
   }, [isSuccess, isError, error, allListings]);
 
-  const auctions = allListings.filter(l => l.listing_type === 'auction');
+  const now = new Date()
+  const activeListings = (Array.isArray(allListings) ? allListings : [])
+    .filter(l => !l?.is_deleted)
+    .filter(l => !l?.is_sold)
+    .filter(l => l?.status === 'active')
+    .filter(l => !(l?.listing_type === 'auction' && l?.auction_end && new Date(l.auction_end) < now))
+
+  const auctions = activeListings.filter(l => l.listing_type === 'auction');
   const endingSoon = [...auctions]
-    .filter(l => l.auction_end && new Date(l.auction_end) > new Date())
+    .filter(l => l.auction_end && new Date(l.auction_end) > now)
     .sort((a, b) => new Date(a.auction_end) - new Date(b.auction_end))
     .slice(0, 4);
   const trending = [...auctions]
     .sort((a, b) => (b.bid_count || 0) - (a.bid_count || 0))
     .slice(0, 4);
-  const newest = allListings.slice(0, 8);
+  const newest = activeListings.slice(0, 8);
 
   if (isLoading) {
     return (
@@ -62,14 +69,14 @@ export default function Home() {
 
   return (
     <div>
-      <HeroSection liveListings={allListings} />
+      <HeroSection liveListings={activeListings} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-10">
         {/* €1 Start deals — first thing after hero */}
-        <EuroStartSection listings={allListings} />
+        <EuroStartSection listings={activeListings} />
 
         {/* Ending Soon */}
-        <EndingSoonSection allListings={allListings} />
+        <EndingSoonSection allListings={activeListings} />
 
         {/* Trending Auctions */}
         {trending.length > 0 && (

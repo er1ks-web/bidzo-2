@@ -60,6 +60,13 @@ export default function Browse() {
   const filtered = useMemo(() => {
     let result = [...listings];
 
+    // Hide deleted/expired/non-active listings
+    const now = new Date();
+    result = result
+      .filter(l => !l?.is_deleted)
+      .filter(l => l?.status === 'active')
+      .filter(l => !(l?.listing_type === 'auction' && l?.auction_end && new Date(l.auction_end) < now));
+
     // Search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
