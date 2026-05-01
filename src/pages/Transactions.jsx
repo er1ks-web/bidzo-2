@@ -70,7 +70,7 @@ export default function Transactions() {
   }
 
   const { data: asBuyer = [], isLoading: loadingBuyer } = useQuery({
-    queryKey: ['tx-buyer', user?.email],
+    queryKey: ['tx-buyer', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('auction_transactions')
@@ -99,7 +99,7 @@ export default function Transactions() {
   });
 
   const { data: asSeller = [], isLoading: loadingSeller } = useQuery({
-    queryKey: ['tx-seller', user?.email],
+    queryKey: ['tx-seller', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('auction_transactions')
@@ -128,8 +128,8 @@ export default function Transactions() {
   });
 
   const refetchAll = () => {
-    queryClient.invalidateQueries({ queryKey: ['tx-buyer', user?.email] });
-    queryClient.invalidateQueries({ queryKey: ['tx-seller', user?.email] });
+    queryClient.invalidateQueries({ queryKey: ['tx-buyer'], exact: false });
+    queryClient.invalidateQueries({ queryKey: ['tx-seller'], exact: false });
   };
 
   // Real-time subscription — updates all 4 steps live for both parties
@@ -171,7 +171,7 @@ export default function Transactions() {
       supabase.removeChannel(buyerChannel);
       supabase.removeChannel(sellerChannel);
     };
-  }, [user?.id, user?.email, queryClient]);
+  }, [user?.id, queryClient]);
 
   const handleConfirm = async (tx) => {
     setConfirmLoading(tx.id);

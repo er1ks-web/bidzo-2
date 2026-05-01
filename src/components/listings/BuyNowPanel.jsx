@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/supabase'
 import { useAuth } from '@/lib/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Zap } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,6 +20,7 @@ import {
 export default function BuyNowPanel({ listing, user, onSuccess }) {
   const { requireLogin } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleBuyNow = async () => {
     if (!user) {
@@ -73,6 +75,19 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
         toast.error('Purchase created, but deal record failed. Please contact support.')
         return
       }
+
+      queryClient.setQueryData(['listing', listing.id], (prev) => {
+        if (!prev || typeof prev !== 'object') return prev
+        return {
+          ...prev,
+          status: 'sold_pending',
+          is_sold: false,
+          highest_bidder: user.email,
+          highest_bidder_name: user.full_name,
+          current_bid: listing.buy_now_price,
+          auction_end: now,
+        }
+      })
 
       toast.success('Purchase confirmed! Check your Transaction Room.');
       onSuccess?.();
