@@ -258,6 +258,35 @@ export default function ListingDetail() {
         return
       }
 
+      // Prevent double purchases: verify latest listing state
+      const { data: listingRows, error: listingReadError } = await supabase
+        .from('listings')
+        .select('id, status, is_sold, auction_end')
+        .eq('id', listing.id)
+        .limit(1)
+
+      if (listingReadError) console.log(listingReadError)
+      const latest = Array.isArray(listingRows) ? (listingRows[0] || null) : null
+      const latestHasEnded = !!(latest?.auction_end && new Date(latest.auction_end) < new Date())
+      const latestUnavailable = !latest || latest?.is_sold || latest?.status !== 'active' || latestHasEnded
+      if (latestUnavailable) {
+        toast.error('This listing is no longer available.')
+        return
+      }
+
+      // If a transaction already exists for this listing, don't create another
+      const { data: existingTx, error: existingTxError } = await supabase
+        .from('auction_transactions')
+        .select('id')
+        .eq('listing_id', listing.id)
+        .limit(1)
+
+      if (existingTxError) console.log(existingTxError)
+      if (Array.isArray(existingTx) && existingTx[0]) {
+        toast.error('This listing has already been purchased.')
+        return
+      }
+
       const { data: sellerProfiles, error: sellerErr } = await supabase
         .from('profiles')
         .select('id, email, username, full_name')
@@ -270,7 +299,7 @@ export default function ListingDetail() {
       const sellerName = listing?.seller_name || sellerProfile?.username || sellerProfile?.full_name || (sellerEmail ? sellerEmail.split('@')[0] : null)
 
       // 1) Mark listing as sold_pending (awaiting confirmations)
-      const { error: listingErr } = await supabase
+      const { data: updatedListings, error: listingErr } = await supabase
         .from('listings')
         .update({
           status: 'sold_pending',
@@ -281,10 +310,17 @@ export default function ListingDetail() {
           auction_end: now,
         })
         .eq('id', listing.id)
+        .eq('status', 'active')
+        .select('id, status')
 
       if (listingErr) {
         console.log(listingErr)
         toast.error('Could not complete purchase. Please try again.')
+        return
+      }
+
+      if (!Array.isArray(updatedListings) || updatedListings.length === 0) {
+        toast.error('This listing is no longer available.')
         return
       }
 
@@ -308,6 +344,18 @@ export default function ListingDetail() {
       }
 
       toast.success('Purchase confirmed! Check your Transaction Room.')
+      queryClient.setQueryData(['listing', listingId], (prev) => {
+        if (!prev || typeof prev !== 'object') return prev
+        return {
+          ...prev,
+          status: 'sold_pending',
+          is_sold: false,
+          highest_bidder: user.email,
+          highest_bidder_name: user.full_name,
+          current_bid: listing.price,
+          auction_end: now,
+        }
+      })
       queryClient.invalidateQueries({ queryKey: ['listing', listingId] })
     } catch (e) {
       console.log(e)
