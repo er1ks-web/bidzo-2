@@ -82,6 +82,45 @@ export default function Navbar() {
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
 
+    const markUnseen = () => {
+      try {
+        localStorage.setItem('tx_last_update', new Date().toISOString())
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    const onChange = () => {
+      markUnseen()
+    }
+
+    const buyerChannel = supabase
+      .channel(`navbar-tx-buyer-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'auction_transactions', filter: `buyer_id=eq.${user.id}` },
+        onChange
+      )
+      .subscribe()
+
+    const sellerChannel = supabase
+      .channel(`navbar-tx-seller-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'auction_transactions', filter: `seller_id=eq.${user.id}` },
+        onChange
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(buyerChannel)
+      supabase.removeChannel(sellerChannel)
+    }
+  }, [isAuthenticated, user?.id])
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+
     const compute = () => {
       try {
         const seen = localStorage.getItem('tx_last_seen')
@@ -151,10 +190,10 @@ export default function Navbar() {
                   <span className="relative">
                     <Icon className="w-4 h-4" />
                     {to === '/messages' && unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-accent" />
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-yellow-400" />
                     )}
                     {to === '/deals' && hasUnseenDeals && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-accent" />
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-yellow-400" />
                     )}
                   </span>
                   <span className="hidden lg:inline">{label}</span>
@@ -213,10 +252,10 @@ export default function Navbar() {
                         <span className="relative">
                           <Icon className="w-5 h-5" />
                           {to === '/messages' && unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-accent" />
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-yellow-400" />
                           )}
                           {to === '/deals' && hasUnseenDeals && (
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-accent" />
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-yellow-400" />
                           )}
                         </span>
                         {label}
