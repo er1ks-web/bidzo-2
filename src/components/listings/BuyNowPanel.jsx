@@ -31,8 +31,11 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
     try {
       const now = new Date().toISOString();
 
+      console.log('[BuyNow] start', { listingId: listing?.id, now })
+
       const buyerId = user?.id
       const sellerId = listing?.seller_id
+      console.log('[BuyNow] ids', { buyerId, sellerId })
       if (!buyerId || !sellerId) {
         toast.error('Missing buyer or seller info')
         return
@@ -49,6 +52,7 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
       const latest = Array.isArray(listingRows) ? (listingRows[0] || null) : null
       const latestHasEnded = !!(latest?.auction_end && new Date(latest.auction_end) < new Date())
       const latestUnavailable = !latest || latest?.is_sold || latest?.status !== 'active' || latestHasEnded
+      console.log('[BuyNow] latest listing state', { latest, latestHasEnded, latestUnavailable })
       if (latestUnavailable) {
         toast.error('This listing is no longer available.')
 
@@ -66,6 +70,7 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
 
       if (existingTxError) console.log(existingTxError)
       if (Array.isArray(existingTx) && existingTx[0]) {
+        console.log('[BuyNow] existingTx found', existingTx[0])
         toast.error('This listing has already been purchased.')
 
         queryClient.setQueryData(['listing', listing.id], (prev) => {
@@ -95,6 +100,8 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
         .eq('status', 'active')
         .select('id, status')
 
+      console.log('[BuyNow] listing update result', { updatedListings, listingErr })
+
       if (listingErr) {
         console.log(listingErr)
         toast.error('Could not complete Buy Now. Please try again.')
@@ -109,6 +116,7 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
       // 2. Create AuctionTransaction record
       let txErr = null
       {
+        console.log('[BuyNow] inserting auction_transactions (with title/image)')
         const { error } = await supabase
           .from('auction_transactions')
           .insert({
@@ -125,9 +133,12 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
         txErr = error
       }
 
+      console.log('[BuyNow] tx insert (with title/image) result', { txErr })
+
       // If denormalized columns don't exist, retry with core columns only
       if (txErr && txErr.code === 'PGRST204') {
         console.log(txErr)
+        console.log('[BuyNow] retry inserting auction_transactions (core columns only)')
         const { error } = await supabase
           .from('auction_transactions')
           .insert({
@@ -141,6 +152,8 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
           })
         txErr = error
       }
+
+      console.log('[BuyNow] tx insert final result', { txErr })
 
       if (txErr) {
         console.log(txErr)
@@ -162,6 +175,8 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
       })
 
       queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
+
+      console.log('[BuyNow] success')
 
       toast.success('Purchase confirmed! Check your Transaction Room.');
       onSuccess?.();

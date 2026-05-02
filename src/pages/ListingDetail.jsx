@@ -250,8 +250,13 @@ export default function ListingDetail() {
 
     try {
       const now = new Date().toISOString()
+
+      console.log('[BuyNowFixed] start', { listingId: listing?.id, now })
+
       const buyerId = user?.id
       const sellerId = listing?.seller_id
+
+      console.log('[BuyNowFixed] ids', { buyerId, sellerId })
 
       if (!buyerId || !sellerId) {
         toast.error('Missing buyer or seller info')
@@ -269,6 +274,8 @@ export default function ListingDetail() {
       const latest = Array.isArray(listingRows) ? (listingRows[0] || null) : null
       const latestHasEnded = !!(latest?.auction_end && new Date(latest.auction_end) < new Date())
       const latestUnavailable = !latest || latest?.is_sold || latest?.status !== 'active' || latestHasEnded
+
+      console.log('[BuyNowFixed] latest listing state', { latest, latestHasEnded, latestUnavailable })
       if (latestUnavailable) {
         toast.error('This listing is no longer available.')
 
@@ -286,6 +293,7 @@ export default function ListingDetail() {
 
       if (existingTxError) console.log(existingTxError)
       if (Array.isArray(existingTx) && existingTx[0]) {
+        console.log('[BuyNowFixed] existingTx found', existingTx[0])
         toast.error('This listing has already been purchased.')
 
         queryClient.invalidateQueries({ queryKey: ['listing', listingId] })
@@ -319,6 +327,8 @@ export default function ListingDetail() {
         .eq('status', 'active')
         .select('id, status')
 
+      console.log('[BuyNowFixed] listing update result', { updatedListings, listingErr })
+
       if (listingErr) {
         console.log(listingErr)
         toast.error('Could not complete purchase. Please try again.')
@@ -333,6 +343,7 @@ export default function ListingDetail() {
       // 2) Create deal record so it shows up in Deals/Transactions
       let txErr = null
       {
+        console.log('[BuyNowFixed] inserting auction_transactions (with title/image)')
         const { error } = await supabase
           .from('auction_transactions')
           .insert({
@@ -349,9 +360,12 @@ export default function ListingDetail() {
         txErr = error
       }
 
+      console.log('[BuyNowFixed] tx insert (with title/image) result', { txErr })
+
       // If denormalized columns don't exist, retry with core columns only
       if (txErr && txErr.code === 'PGRST204') {
         console.log(txErr)
+        console.log('[BuyNowFixed] retry inserting auction_transactions (core columns only)')
         const { error } = await supabase
           .from('auction_transactions')
           .insert({
@@ -365,6 +379,8 @@ export default function ListingDetail() {
           })
         txErr = error
       }
+
+      console.log('[BuyNowFixed] tx insert final result', { txErr })
 
       if (txErr) {
         console.log(txErr)
@@ -387,6 +403,8 @@ export default function ListingDetail() {
       })
       queryClient.invalidateQueries({ queryKey: ['listing', listingId] })
       queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
+
+      console.log('[BuyNowFixed] success')
     } catch (e) {
       console.log(e)
       toast.error('Something went wrong. Please try again.')
