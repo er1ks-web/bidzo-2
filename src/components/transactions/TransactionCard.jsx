@@ -42,6 +42,7 @@ export default function TransactionCard({
   const cfg = STATUS_CONFIG[transaction.status] || STATUS_CONFIG.sold_pending;
   const StatusIcon = cfg.icon;
   const isCompleted = transaction.status === 'completed';
+  const isCancelled = transaction.status === 'cancelled';
 
   const currentUserId = isBuyer ? transaction.buyer_id : transaction.seller_id;
   const otherPartyId = isBuyer ? transaction.seller_id : transaction.buyer_id;
@@ -90,7 +91,7 @@ export default function TransactionCard({
         created_date: row.created_date || row.created_at,
       }
     },
-    enabled: isCompleted && (isBuyer || isSeller),
+    enabled: isCompleted && !isCancelled && (isBuyer || isSeller),
   });
 
   const handleReviewSubmitted = () => {
@@ -153,7 +154,7 @@ export default function TransactionCard({
           )}
 
           {/* 4-step progress pills */}
-          {!isCompleted && (
+          {!isCompleted && !isCancelled && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               <span className={cn('text-[10px] px-2 py-0.5 rounded-full', transaction.buyer_confirmed ? 'bg-green-500/20 text-green-400' : 'bg-muted text-muted-foreground')}>
                 {transaction.buyer_confirmed ? '✓ Buyer confirmed' : '○ Buyer pending'}
@@ -231,6 +232,40 @@ export default function TransactionCard({
                   className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
                   Reject Sale
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+
+        {canBuyerConfirm && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="flex-1 gap-2"
+                disabled={confirmLoading === transaction.id}
+              >
+                Cancel Purchase
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Cancel this purchase?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  If you cancel this purchase, the transaction will be cancelled and the listing will be removed from the marketplace.
+                  Repeated cancellations may result in strikes or account restrictions.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={confirmLoading === transaction.id}>Keep Purchase</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onRejectSale?.(transaction)}
+                  disabled={confirmLoading === transaction.id}
+                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                >
+                  Cancel Purchase
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

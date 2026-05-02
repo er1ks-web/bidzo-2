@@ -198,7 +198,7 @@ export default function Transactions() {
     }
 
     const statusToTab = (status) => {
-      return status === 'completed' ? 'completed' : 'active'
+      return status === 'completed' || status === 'cancelled' ? 'completed' : 'active'
     }
 
     const markTabsUpdated = (tabs) => {
@@ -325,13 +325,21 @@ export default function Transactions() {
       if (authError) console.log(authError)
       const authUser = authData?.user
 
-      if (!authUser?.id || authUser.email !== tx.seller_email) {
-        toast.error('Only the seller can reject a sale.')
+      if (!authUser?.id || (authUser.email !== tx.seller_email && authUser.email !== tx.buyer_email)) {
+        toast.error('Only the buyer or seller can cancel this transaction.')
         setConfirmLoading(null)
         return
       }
 
-      if (tx.seller_confirmed) {
+      const isBuyer = authUser.email === tx.buyer_email
+
+      if (isBuyer && tx.buyer_confirmed) {
+        toast.error('This purchase has already been confirmed.')
+        setConfirmLoading(null)
+        return
+      }
+
+      if (!isBuyer && tx.seller_confirmed) {
         toast.error('This sale has already been confirmed.')
         setConfirmLoading(null)
         return
@@ -357,10 +365,10 @@ export default function Transactions() {
         .eq('id', tx.listing_id)
 
       if (listingError) console.log(listingError)
-      toast.success('Sale rejected. The listing has been cancelled.')
+      toast.success('Transaction cancelled. The listing has been cancelled.')
     } catch (e) {
       console.log(e)
-      toast.error('Failed to reject sale')
+      toast.error('Failed to cancel transaction')
     }
 
     refetchAll()
@@ -423,7 +431,7 @@ export default function Transactions() {
   const activeBuyer = asBuyer.filter(t => t.status !== 'completed' && t.status !== 'cancelled');
   const activeSeller = asSeller.filter(t => t.status !== 'completed' && t.status !== 'cancelled');
   const completedAll = [...asBuyer, ...asSeller]
-    .filter(t => t.status === 'completed')
+    .filter(t => t.status === 'completed' || t.status === 'cancelled')
     .sort((a, b) => new Date(b.completed_at || b.updated_date) - new Date(a.completed_at || a.updated_date));
   const isLoading = loadingBuyer || loadingSeller;
 
