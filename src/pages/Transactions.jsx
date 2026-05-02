@@ -14,6 +14,8 @@ export default function Transactions() {
   const [user, setUser] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(null);
   const [shippedModalTx, setShippedModalTx] = useState(null);
+  const [tab, setTab] = useState('won');
+  const [tabDots, setTabDots] = useState({ won: false, sold: false, completed: false });
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -23,6 +25,44 @@ export default function Transactions() {
       // ignore
     }
   }, []);
+
+  useEffect(() => {
+    const computeDots = () => {
+      try {
+        const keys = ['won', 'sold', 'completed']
+        const next = { won: false, sold: false, completed: false }
+        for (const k of keys) {
+          const seen = localStorage.getItem(`tx_tab_seen_${k}`)
+          const updated = localStorage.getItem(`tx_tab_update_${k}`)
+          if (!updated) {
+            next[k] = false
+            continue
+          }
+          if (!seen) {
+            next[k] = true
+            continue
+          }
+          next[k] = new Date(updated) > new Date(seen)
+        }
+        setTabDots(next)
+      } catch (e) {
+        setTabDots({ won: false, sold: false, completed: false })
+      }
+    }
+
+    computeDots()
+    const onStorage = (e) => {
+      if (typeof e?.key === 'string' && (e.key.startsWith('tx_tab_seen_') || e.key.startsWith('tx_tab_update_'))) {
+        computeDots()
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    const interval = setInterval(computeDots, 1500)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      clearInterval(interval)
+    }
+  }, [])
 
   useEffect(() => {
     (async () => {
@@ -157,8 +197,60 @@ export default function Transactions() {
       }
     }
 
-    const onChange = () => {
+    const statusToTab = (status) => {
+      return status === 'completed' ? 'completed' : 'active'
+    }
+
+    const markTabsUpdated = (tabs) => {
+      try {
+        const now = new Date().toISOString()
+        for (const t of tabs) {
+          if (t === 'won' || t === 'sold' || t === 'completed') {
+            localStorage.setItem(`tx_tab_update_${t}`, now)
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    const onBuyerChange = (payload) => {
       markUnseenUpdate()
+      try {
+        const newStatus = payload?.new?.status
+        const oldStatus = payload?.old?.status
+        const affected = new Set()
+
+        const newGroup = statusToTab(newStatus)
+        const oldGroup = statusToTab(oldStatus)
+
+        if (newGroup) affected.add(newGroup === 'completed' ? 'completed' : 'won')
+        if (oldGroup) affected.add(oldGroup === 'completed' ? 'completed' : 'won')
+
+        markTabsUpdated(Array.from(affected))
+      } catch (e) {
+        markTabsUpdated(['won'])
+      }
+      refetchAll();
+    }
+
+    const onSellerChange = (payload) => {
+      markUnseenUpdate()
+      try {
+        const newStatus = payload?.new?.status
+        const oldStatus = payload?.old?.status
+        const affected = new Set()
+
+        const newGroup = statusToTab(newStatus)
+        const oldGroup = statusToTab(oldStatus)
+
+        if (newGroup) affected.add(newGroup === 'completed' ? 'completed' : 'sold')
+        if (oldGroup) affected.add(oldGroup === 'completed' ? 'completed' : 'sold')
+
+        markTabsUpdated(Array.from(affected))
+      } catch (e) {
+        markTabsUpdated(['sold'])
+      }
       refetchAll();
     }
 
@@ -167,7 +259,7 @@ export default function Transactions() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'auction_transactions', filter: `buyer_id=eq.${user.id}` },
-        onChange
+        onBuyerChange
       )
       .subscribe();
 
@@ -176,7 +268,7 @@ export default function Transactions() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'auction_transactions', filter: `seller_id=eq.${user.id}` },
-        onChange
+        onSellerChange
       )
       .subscribe();
 
@@ -304,18 +396,43 @@ export default function Transactions() {
         loading={!!confirmLoading}
       />
 
-      <Tabs defaultValue="won">
+      <Tabs
+        value={tab}
+        onValueChange={(v) => {
+          setTab(v)
+          try {
+            localStorage.setItem(`tx_tab_seen_${v}`, new Date().toISOString())
+          } catch (e) {
+            // ignore
+          }
+        }}
+      >
         <TabsList className="w-full">
           <TabsTrigger value="won" className="flex-1 gap-2">
-            <Trophy className="w-4 h-4" />
+            <span className="relative">
+              <Trophy className="w-4 h-4" />
+              {tabDots.won && tab !== 'won' && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-yellow-400" />
+              )}
+            </span>
             {t('deals.won')} ({activeBuyer.length})
           </TabsTrigger>
           <TabsTrigger value="sold" className="flex-1 gap-2">
-            <ShoppingCart className="w-4 h-4" />
+            <span className="relative">
+              <ShoppingCart className="w-4 h-4" />
+              {tabDots.sold && tab !== 'sold' && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-yellow-400" />
+              )}
+            </span>
             {t('deals.sold')} ({activeSeller.length})
           </TabsTrigger>
           <TabsTrigger value="completed" className="flex-1 gap-2">
-            <CheckCircle className="w-4 h-4" />
+            <span className="relative">
+              <CheckCircle className="w-4 h-4" />
+              {tabDots.completed && tab !== 'completed' && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-yellow-400" />
+              )}
+            </span>
             {t('deals.completed')} ({completedAll.length})
           </TabsTrigger>
         </TabsList>
