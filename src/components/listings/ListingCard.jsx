@@ -27,8 +27,9 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
   const isActive = listing.status === 'active' && !hasEnded;
   const imageUrl = listing.images?.[0] || PLACEHOLDER_IMAGES[index % 3];
   const isOwner = user?.id && listing?.seller_id && user.id === listing.seller_id;
-  const isCancelled = listing?.status === 'cancelled';
-  const isSold = !!listing?.is_sold || ['sold', 'sold_pending', 'in_progress', 'completed'].includes(listing?.status);
+  const status = typeof listing?.status === 'string' ? listing.status : '';
+  const isCancelled = status === 'cancelled' || status === 'canceled' || status.includes('cancel');
+  const isSold = !isCancelled && (!!listing?.is_sold || ['sold', 'sold_pending', 'in_progress', 'completed'].includes(status));
 
   const displayPrice = isAuction
     ? (listing.current_bid != null ? listing.current_bid : listing.price)
@@ -65,9 +66,16 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
               )}
             </div>
             {!isActive && (
-              <div className="absolute inset-0 bg-foreground/50 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">
-                  {isCancelled ? 'Canceled' : (isSold ? t('listing.sold') : t('listing.expired'))}
+              <div className="absolute inset-0 bg-foreground/35 flex items-center justify-center">
+                <span
+                  className={cn(
+                    'font-bold uppercase tracking-wide text-xl sm:text-2xl',
+                    isCancelled
+                      ? 'text-destructive'
+                      : (isSold ? 'text-yellow-400' : 'text-white')
+                  )}
+                >
+                  {isCancelled ? 'CANCELED' : (isSold ? String(t('listing.sold') || 'SOLD').toUpperCase() : String(t('listing.expired') || 'EXPIRED').toUpperCase())}
                 </span>
               </div>
             )}
