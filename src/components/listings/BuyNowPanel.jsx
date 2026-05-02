@@ -41,6 +41,11 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
         return
       }
 
+      if (!listing?.buy_now_price) {
+        toast.error('Buy Now is not available for this listing.')
+        return
+      }
+
       // Prevent double purchases: verify latest listing state
       const { data: listingRows, error: listingReadError } = await supabase
         .from('listings')
@@ -85,79 +90,15 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
         return
       }
 
-      // 1. Close the auction — mark as sold_pending with buyer as winner
-      const { data: updatedListings, error: listingErr } = await supabase
-        .from('listings')
-        .update({
-          status: 'sold_pending',
-          is_sold: false,
-          highest_bidder: user.email,
-          highest_bidder_name: user.full_name,
-          current_bid: listing.buy_now_price,
-          auction_end: now,
-        })
-        .eq('id', listing.id)
-        .eq('status', 'active')
-        .select('id, status')
+      console.log('[BuyNow] invoking rpc buy_now')
+      const { data: txId, error: rpcError } = await supabase.rpc('buy_now', {
+        p_listing_id: listing.id,
+      })
 
-      console.log('[BuyNow] listing update result', { updatedListings, listingErr })
+      console.log('[BuyNow] rpc buy_now result', { txId, rpcError })
 
-      if (listingErr) {
-        console.log(listingErr)
-        toast.error('Could not complete Buy Now. Please try again.')
-        return
-      }
-
-      if (!Array.isArray(updatedListings) || updatedListings.length === 0) {
-        toast.error('This listing is no longer available.')
-        return
-      }
-
-      // 2. Create AuctionTransaction record
-      let txErr = null
-      {
-        console.log('[BuyNow] inserting auction_transactions (with title/image)')
-        const { error } = await supabase
-          .from('auction_transactions')
-          .insert({
-            listing_id: listing.id,
-            listing_title: listing.title,
-            listing_image: listing.images?.[0] || null,
-            seller_id: sellerId,
-            buyer_id: buyerId,
-            winning_amount: listing.buy_now_price,
-            status: 'sold_pending',
-            buyer_confirmed: false,
-            seller_confirmed: false,
-          })
-        txErr = error
-      }
-
-      console.log('[BuyNow] tx insert (with title/image) result', { txErr })
-
-      // If denormalized columns don't exist, retry with core columns only
-      if (txErr && txErr.code === 'PGRST204') {
-        console.log(txErr)
-        console.log('[BuyNow] retry inserting auction_transactions (core columns only)')
-        const { error } = await supabase
-          .from('auction_transactions')
-          .insert({
-            listing_id: listing.id,
-            seller_id: sellerId,
-            buyer_id: buyerId,
-            winning_amount: listing.buy_now_price,
-            status: 'sold_pending',
-            buyer_confirmed: false,
-            seller_confirmed: false,
-          })
-        txErr = error
-      }
-
-      console.log('[BuyNow] tx insert final result', { txErr })
-
-      if (txErr) {
-        console.log(txErr)
-        toast.error('Purchase created, but deal record failed. Please contact support.')
+      if (rpcError) {
+        toast.error(rpcError.message || 'Could not complete Buy Now. Please try again.')
         return
       }
 
@@ -175,6 +116,9 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
       })
 
       queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
+      queryClient.invalidateQueries({ queryKey: ['listing', listing.id] })
+      queryClient.invalidateQueries({ queryKey: ['tx-buyer'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['tx-seller'], exact: false })
 
       console.log('[BuyNow] success')
 
