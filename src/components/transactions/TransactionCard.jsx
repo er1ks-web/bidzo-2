@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, ExternalLink, CheckCircle2, Clock, Package, Truck, Star, Info } from 'lucide-react';
@@ -37,6 +38,11 @@ export default function TransactionCard({
   onMarkShipped,
   confirmLoading,
 }) {
+  const [sellerCancelOpen, setSellerCancelOpen] = useState(false)
+  const [sellerCancelAck, setSellerCancelAck] = useState(false)
+  const [buyerCancelOpen, setBuyerCancelOpen] = useState(false)
+  const [buyerCancelAck, setBuyerCancelAck] = useState(false)
+
   const isBuyer = currentUserEmail === transaction.buyer_email;
   const isSeller = currentUserEmail === transaction.seller_email;
   const cfg = STATUS_CONFIG[transaction.status] || STATUS_CONFIG.sold_pending;
@@ -205,7 +211,13 @@ export default function TransactionCard({
         )}
 
         {canSellerConfirm && (
-          <AlertDialog>
+          <AlertDialog
+            open={sellerCancelOpen}
+            onOpenChange={(v) => {
+              setSellerCancelOpen(v)
+              if (!v) setSellerCancelAck(false)
+            }}
+          >
             <AlertDialogTrigger asChild>
               <Button
                 size="sm"
@@ -224,11 +236,28 @@ export default function TransactionCard({
                   Repeated cancellations may result in strikes or account restrictions.
                 </AlertDialogDescription>
               </AlertDialogHeader>
+
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id={`seller-cancel-ack-${transaction.id}`}
+                  checked={sellerCancelAck}
+                  onChange={(e) => setSellerCancelAck(e.target.checked)}
+                  className="mt-1 cursor-pointer"
+                />
+                <label
+                  htmlFor={`seller-cancel-ack-${transaction.id}`}
+                  className="text-sm cursor-pointer text-foreground"
+                >
+                  I understand that repeated cancellations may result in strikes or account restrictions
+                </label>
+              </div>
+
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={confirmLoading === transaction.id}>Keep Sale</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => onRejectSale?.(transaction)}
-                  disabled={confirmLoading === transaction.id}
+                  disabled={confirmLoading === transaction.id || !sellerCancelAck}
                   className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
                   Reject Sale
@@ -239,7 +268,13 @@ export default function TransactionCard({
         )}
 
         {canBuyerConfirm && (
-          <AlertDialog>
+          <AlertDialog
+            open={buyerCancelOpen}
+            onOpenChange={(v) => {
+              setBuyerCancelOpen(v)
+              if (!v) setBuyerCancelAck(false)
+            }}
+          >
             <AlertDialogTrigger asChild>
               <Button
                 size="sm"
@@ -258,11 +293,28 @@ export default function TransactionCard({
                   Repeated cancellations may result in strikes or account restrictions.
                 </AlertDialogDescription>
               </AlertDialogHeader>
+
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id={`buyer-cancel-ack-${transaction.id}`}
+                  checked={buyerCancelAck}
+                  onChange={(e) => setBuyerCancelAck(e.target.checked)}
+                  className="mt-1 cursor-pointer"
+                />
+                <label
+                  htmlFor={`buyer-cancel-ack-${transaction.id}`}
+                  className="text-sm cursor-pointer text-foreground"
+                >
+                  I understand that repeated cancellations may result in strikes or account restrictions
+                </label>
+              </div>
+
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={confirmLoading === transaction.id}>Keep Purchase</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => onRejectSale?.(transaction)}
-                  disabled={confirmLoading === transaction.id}
+                  disabled={confirmLoading === transaction.id || !buyerCancelAck}
                   className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
                   Cancel Purchase
