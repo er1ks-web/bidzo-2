@@ -90,7 +90,8 @@ export default function Navbar() {
       }
     }
 
-    const onChange = () => {
+    const onChange = (payload) => {
+      console.log('[NavbarDealsRT] auction_transactions change', payload)
       markUnseen()
     }
 
@@ -101,7 +102,9 @@ export default function Navbar() {
         { event: '*', schema: 'public', table: 'auction_transactions', filter: `buyer_id=eq.${user.id}` },
         onChange
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('[NavbarDealsRT] buyer channel status', status)
+      })
 
     const sellerChannel = supabase
       .channel(`navbar-tx-seller-${user.id}`)
@@ -110,7 +113,9 @@ export default function Navbar() {
         { event: '*', schema: 'public', table: 'auction_transactions', filter: `seller_id=eq.${user.id}` },
         onChange
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('[NavbarDealsRT] seller channel status', status)
+      })
 
     return () => {
       supabase.removeChannel(buyerChannel)
