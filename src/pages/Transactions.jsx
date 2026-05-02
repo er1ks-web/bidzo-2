@@ -345,26 +345,17 @@ export default function Transactions() {
         return
       }
 
-      const { error: txError } = await supabase
-        .from('auction_transactions')
-        .update({
-          status: 'cancelled',
-        })
-        .eq('id', tx.id)
+      const { error: rpcError } = await supabase.rpc('cancel_transaction', {
+        p_tx_id: tx.id,
+      })
 
-      if (txError) {
-        console.log(txError)
-        toast.error(txError.message || 'Failed to reject sale')
+      if (rpcError) {
+        console.log(rpcError)
+        toast.error(rpcError.message || 'Failed to cancel transaction')
         setConfirmLoading(null)
         return
       }
 
-      const { error: listingError } = await supabase
-        .from('listings')
-        .update({ status: 'cancelled' })
-        .eq('id', tx.listing_id)
-
-      if (listingError) console.log(listingError)
       toast.success('Transaction cancelled. The listing has been cancelled.')
     } catch (e) {
       console.log(e)
