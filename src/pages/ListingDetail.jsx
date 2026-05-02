@@ -331,17 +331,40 @@ export default function ListingDetail() {
       }
 
       // 2) Create deal record so it shows up in Deals/Transactions
-      const { error: txErr } = await supabase
-        .from('auction_transactions')
-        .insert({
-          listing_id: listing.id,
-          seller_id: sellerId,
-          buyer_id: buyerId,
-          winning_amount: listing.price,
-          status: 'sold_pending',
-          buyer_confirmed: false,
-          seller_confirmed: false,
-        })
+      let txErr = null
+      {
+        const { error } = await supabase
+          .from('auction_transactions')
+          .insert({
+            listing_id: listing.id,
+            listing_title: listing.title,
+            listing_image: listing.images?.[0] || null,
+            seller_id: sellerId,
+            buyer_id: buyerId,
+            winning_amount: listing.price,
+            status: 'sold_pending',
+            buyer_confirmed: false,
+            seller_confirmed: false,
+          })
+        txErr = error
+      }
+
+      // If denormalized columns don't exist, retry with core columns only
+      if (txErr && txErr.code === 'PGRST204') {
+        console.log(txErr)
+        const { error } = await supabase
+          .from('auction_transactions')
+          .insert({
+            listing_id: listing.id,
+            seller_id: sellerId,
+            buyer_id: buyerId,
+            winning_amount: listing.price,
+            status: 'sold_pending',
+            buyer_confirmed: false,
+            seller_confirmed: false,
+          })
+        txErr = error
+      }
 
       if (txErr) {
         console.log(txErr)
