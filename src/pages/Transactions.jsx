@@ -317,6 +317,56 @@ export default function Transactions() {
     setConfirmLoading(null);
   };
 
+  const handleRejectSale = async (tx) => {
+    setConfirmLoading(tx.id)
+
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser()
+      if (authError) console.log(authError)
+      const authUser = authData?.user
+
+      if (!authUser?.id || authUser.email !== tx.seller_email) {
+        toast.error('Only the seller can reject a sale.')
+        setConfirmLoading(null)
+        return
+      }
+
+      if (tx.seller_confirmed) {
+        toast.error('This sale has already been confirmed.')
+        setConfirmLoading(null)
+        return
+      }
+
+      const { error: txError } = await supabase
+        .from('auction_transactions')
+        .update({
+          status: 'cancelled',
+        })
+        .eq('id', tx.id)
+
+      if (txError) {
+        console.log(txError)
+        toast.error(txError.message || 'Failed to reject sale')
+        setConfirmLoading(null)
+        return
+      }
+
+      const { error: listingError } = await supabase
+        .from('listings')
+        .update({ status: 'cancelled' })
+        .eq('id', tx.listing_id)
+
+      if (listingError) console.log(listingError)
+      toast.success('Sale rejected. The listing has been cancelled.')
+    } catch (e) {
+      console.log(e)
+      toast.error('Failed to reject sale')
+    }
+
+    refetchAll()
+    setConfirmLoading(null)
+  }
+
   const handleMarkShipped = (tx) => {
     setShippedModalTx(tx);
   };
@@ -453,6 +503,7 @@ export default function Transactions() {
                 transaction={tx}
                 currentUserEmail={user.email}
                 onConfirm={handleConfirm}
+                onRejectSale={handleRejectSale}
                 onComplete={handleComplete}
                 onMarkShipped={handleMarkShipped}
                 confirmLoading={confirmLoading}
@@ -477,6 +528,7 @@ export default function Transactions() {
                 transaction={tx}
                 currentUserEmail={user.email}
                 onConfirm={handleConfirm}
+                onRejectSale={handleRejectSale}
                 onComplete={handleComplete}
                 onMarkShipped={handleMarkShipped}
                 confirmLoading={confirmLoading}
@@ -499,6 +551,7 @@ export default function Transactions() {
                 transaction={tx}
                 currentUserEmail={user.email}
                 onConfirm={handleConfirm}
+                onRejectSale={handleRejectSale}
                 onComplete={handleComplete}
                 onMarkShipped={handleMarkShipped}
                 confirmLoading={confirmLoading}

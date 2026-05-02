@@ -7,6 +7,17 @@ import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/supabase'
 import ReviewForm from '@/components/reviews/ReviewForm';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const STATUS_CONFIG = {
   sold_pending: { label: 'Awaiting Confirmation', color: 'bg-yellow-500/20 text-yellow-400', icon: Clock },
@@ -17,7 +28,15 @@ const STATUS_CONFIG = {
   cancelled: { label: 'Cancelled', color: 'bg-destructive/20 text-destructive', icon: Clock },
 };
 
-export default function TransactionCard({ transaction, currentUserEmail, onConfirm, onComplete, onMarkShipped, confirmLoading }) {
+export default function TransactionCard({
+  transaction,
+  currentUserEmail,
+  onConfirm,
+  onRejectSale,
+  onComplete,
+  onMarkShipped,
+  confirmLoading,
+}) {
   const isBuyer = currentUserEmail === transaction.buyer_email;
   const isSeller = currentUserEmail === transaction.seller_email;
   const cfg = STATUS_CONFIG[transaction.status] || STATUS_CONFIG.sold_pending;
@@ -182,6 +201,40 @@ export default function TransactionCard({ transaction, currentUserEmail, onConfi
             <CheckCircle2 className="w-4 h-4" />
             {canBuyerConfirm ? 'Confirm Purchase' : 'Confirm Sale'}
           </Button>
+        )}
+
+        {canSellerConfirm && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="flex-1 gap-2"
+                disabled={confirmLoading === transaction.id}
+              >
+                Reject Sale
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reject this sale?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  If you reject this sale, the transaction will be cancelled and the listing will be removed from the marketplace.
+                  Repeated cancellations may result in strikes or account restrictions.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={confirmLoading === transaction.id}>Keep Sale</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onRejectSale?.(transaction)}
+                  disabled={confirmLoading === transaction.id}
+                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                >
+                  Reject Sale
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
 
         {canMarkShipped && (

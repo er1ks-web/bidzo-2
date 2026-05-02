@@ -433,7 +433,7 @@ export default function Profile() {
 
               <TabsContent value="listings" className="mt-6 space-y-4">
                {(() => {
-                 const SOLD_STATUSES = new Set(['sold', 'sold_pending', 'in_progress', 'completed']);
+                 const SOLD_STATUSES = new Set(['sold', 'sold_pending', 'in_progress', 'completed', 'cancelled']);
                  const sold = myListings.filter(l => l?.is_sold || SOLD_STATUSES.has(l?.status));
                  const active = myListings.filter(l => l?.status === 'active' && !l?.is_sold);
 
