@@ -92,7 +92,7 @@ export default function Footer() {
             <h4 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">{f.legal}</h4>
             <ul className="space-y-2.5 text-sm">
               <li><Link to="/terms" className="hover:text-yellow-400 transition-colors">{f.terms}</Link></li>
-              <li><Link to="/privacy" className="hover:text-yellow-400 transition-colors">{f.privacy}</Link></li>
+              <li><Link to="/privacy" className="cursor-pointer pointer-events-auto hover:text-yellow-400 transition-colors">{f.privacy}</Link></li>
             </ul>
           </div>
 
@@ -130,7 +130,7 @@ export default function Footer() {
           <span>© {year} Bidzo. {f.rights}</span>
           <div className="flex items-center gap-4">
             <Link to="/terms" className="hover:text-white/60 transition-colors">{f.terms}</Link>
-            <Link to="/privacy" className="hover:text-white/60 transition-colors">{f.privacy}</Link>
+            <Link to="/privacy" className="cursor-pointer pointer-events-auto hover:text-white/60 transition-colors">{f.privacy}</Link>
             {isAdmin && (
               <Link to="/admin" className="flex items-center gap-1.5 hover:text-yellow-400 transition-colors">
                 <ShieldCheck className="w-3.5 h-3.5" />

@@ -41,7 +41,7 @@ export default function Browse() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('listings')
-        .select('*, seller_profile:profiles(username,email)')
+        .select('*')
         .eq('is_sold', false)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -52,8 +52,39 @@ export default function Browse() {
       }
 
       const rows = (data || []).filter(l => !l.is_sold);
-      console.log(`[Supabase] DB OK: fetched listings {count: ${rows.length}}`);
-      return rows;
+
+      const sellerIds = Array.from(
+        new Set(
+          rows
+            .map(l => l?.seller_id)
+            .filter(Boolean)
+        )
+      )
+
+      if (sellerIds.length === 0) {
+        console.log(`[Supabase] DB OK: fetched listings {count: ${rows.length}}`);
+        return rows
+      }
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id,username,email')
+        .in('id', sellerIds)
+
+      if (profilesError) {
+        console.log(profilesError)
+        console.log(`[Supabase] DB OK: fetched listings {count: ${rows.length}}`);
+        return rows
+      }
+
+      const profileById = new Map((profilesData || []).map(p => [p.id, p]))
+      const mergedRows = rows.map(l => ({
+        ...l,
+        seller_profile: l?.seller_id ? (profileById.get(l.seller_id) || null) : null,
+      }))
+
+      console.log(`[Supabase] DB OK: fetched listings {count: ${mergedRows.length}}`);
+      return mergedRows
     },
   });
 

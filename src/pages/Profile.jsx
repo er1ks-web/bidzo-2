@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabase'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { User, Star, Calendar, LogOut, Package, Gavel, Wallet as WalletIcon, Settings, AlertCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import ListingCard from '@/components/listings/ListingCard';
+import AuctionTimer from '@/components/listings/AuctionTimer';
 import WalletCard from '@/components/wallet/WalletCard';
 import TopUpModal from '@/components/wallet/TopUpModal';
 import EditProfileCard from '@/components/profile/EditProfileCard';
@@ -25,6 +26,8 @@ export default function Profile() {
   const [walletState, setWalletState] = useState(null);
   const [showTopUp, setShowTopUp] = useState(false);
   const [lightbox, setLightbox] = useState(null); // { images, index }
+  const [hasUnseenOutbid, setHasUnseenOutbid] = useState(false);
+  const myBidListingIdsRef = useRef(new Set());
 
   // Wallet is intentionally disabled for free-launch mode.
   // Flip VITE_ENABLE_WALLET=true to re-enable once integrated.
@@ -205,10 +208,116 @@ export default function Profile() {
       if (error) console.log(error)
 
       const rows = Array.isArray(data) ? data : []
-      return rows.map(b => ({ ...b, created_date: b.created_date || b.created_at }))
+      const normalized = rows.map(b => ({ ...b, created_date: b.created_date || b.created_at }))
+
+      const listingIds = Array.from(new Set(normalized.map(b => b?.listing_id).filter(Boolean)))
+      if (listingIds.length === 0) return []
+
+      const { data: listingData, error: listingErr } = await supabase
+        .from('listings')
+        .select('id,title,images,auction_end,current_bid,status,is_sold,is_deleted,listing_type')
+        .in('id', listingIds)
+
+      if (listingErr) {
+        console.log(listingErr)
+        return []
+      }
+
+      const listingById = new Map((Array.isArray(listingData) ? listingData : []).map(l => [l.id, l]))
+      const now = new Date()
+
+      const isListingActive = (l) => {
+        if (!l || l?.is_deleted) return false
+        if (l?.is_sold) return false
+        if (l?.status !== 'active') return false
+        if (l?.listing_type === 'auction' && l?.auction_end && new Date(l.auction_end) < now) return false
+        const status = typeof l?.status === 'string' ? l.status : ''
+        if (status === 'cancelled' || status === 'canceled' || status.includes('cancel')) return false
+        return true
+      }
+
+      const maxBidByListingId = new Map()
+      for (const b of normalized) {
+        const lid = b?.listing_id
+        const amt = typeof b?.amount === 'number' ? b.amount : Number(b?.amount)
+        if (!lid || !Number.isFinite(amt)) continue
+        const placedAt = b?.created_date || b?.created_at || null
+        const prev = maxBidByListingId.get(lid)
+        if (prev == null || amt > prev.amount) {
+          maxBidByListingId.set(lid, { amount: amt, placedAt })
+        } else if (prev && amt === prev.amount) {
+          const prevT = prev?.placedAt ? new Date(prev.placedAt).getTime() : 0
+          const nextT = placedAt ? new Date(placedAt).getTime() : 0
+          if (nextT >= prevT) maxBidByListingId.set(lid, { amount: amt, placedAt })
+        }
+      }
+
+      const PLACEHOLDER_IMAGES = [
+        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=300&fit=crop',
+        'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
+        'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&h=300&fit=crop',
+      ]
+
+      return listingIds
+        .map((listingId, idx) => {
+          const listing = listingById.get(listingId) || null
+          if (!isListingActive(listing)) return null
+
+          const myBidMeta = maxBidByListingId.get(listingId) || null
+          const myMaxBid = myBidMeta?.amount ?? null
+          const currentBid = listing?.current_bid != null ? Number(listing.current_bid) : null
+          const isWinning = myMaxBid != null && currentBid != null ? myMaxBid >= currentBid : false
+          const imageUrl = listing?.images?.[0] || PLACEHOLDER_IMAGES[idx % PLACEHOLDER_IMAGES.length]
+
+          return {
+            id: `${user.id}-${listingId}`,
+            listing_id: listingId,
+            listing,
+            my_bid: myMaxBid,
+            placed_at: myBidMeta?.placedAt || null,
+            isWinning,
+            imageUrl,
+          }
+        })
+        .filter(Boolean)
     },
     enabled: !!user,
   });
+
+  useEffect(() => {
+    try {
+      const set = new Set((Array.isArray(myBids) ? myBids : []).map(b => b?.listing_id).filter(Boolean))
+      myBidListingIdsRef.current = set
+    } catch (e) {
+      myBidListingIdsRef.current = new Set()
+    }
+  }, [myBids])
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const onInsert = (payload) => {
+      const row = payload?.new || null
+      const listingId = row?.listing_id
+      const bidderId = row?.bidder_id
+      if (!listingId || !bidderId) return
+      if (bidderId === user.id) return
+
+      const set = myBidListingIdsRef.current
+      if (!set || !set.has(listingId)) return
+
+      queryClient.invalidateQueries({ queryKey: ['my-bids', user?.email] })
+    }
+
+    const chan = supabase
+      .channel(`profile-bids-${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bids' }, onInsert)
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(chan)
+    }
+  }, [user?.id, user?.email, queryClient])
 
   const { data: reviews = [] } = useQuery({
     queryKey: ['my-reviews', user?.email],
@@ -311,6 +420,43 @@ export default function Profile() {
     setActiveTab(enableWallet ? (isMobile ? 'wallet' : 'listings') : 'listings');
   }, [isMobile]);
 
+  useEffect(() => {
+    const compute = () => {
+      try {
+        const seen = localStorage.getItem('outbid_last_seen')
+        const updated = localStorage.getItem('outbid_last_update')
+        if (!updated) return setHasUnseenOutbid(false)
+        if (!seen) return setHasUnseenOutbid(true)
+        setHasUnseenOutbid(new Date(updated) > new Date(seen))
+      } catch (e) {
+        setHasUnseenOutbid(false)
+      }
+    }
+
+    compute()
+
+    const onStorage = (e) => {
+      if (e?.key === 'outbid_last_seen' || e?.key === 'outbid_last_update') compute()
+    }
+
+    window.addEventListener('storage', onStorage)
+    const interval = setInterval(compute, 1500)
+
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      clearInterval(interval)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab !== 'bids') return
+    try {
+      localStorage.setItem('outbid_last_seen', new Date().toISOString())
+    } catch (e) {
+      // ignore
+    }
+  }, [activeTab])
+
   if (!user) {
     return (
       <div className="text-center py-20 text-muted-foreground">
@@ -406,13 +552,18 @@ export default function Profile() {
                     {t('wallet.wallet')}
                   </TabsTrigger>
                 )}
+                <TabsTrigger value="bids" className="gap-2">
+                  <span className="relative">
+                    <Gavel className="w-4 h-4" />
+                    {hasUnseenOutbid && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                    )}
+                  </span>
+                  {t('profile.myBids')} ({myBids.length})
+                </TabsTrigger>
                 <TabsTrigger value="listings" className="gap-2">
                   <Package className="w-4 h-4" />
                   {t('profile.myListings')} ({myListings.length})
-                </TabsTrigger>
-                <TabsTrigger value="bids" className="gap-2">
-                  <Gavel className="w-4 h-4" />
-                  {t('profile.myBids')} ({myBids.length})
                 </TabsTrigger>
                 <TabsTrigger value="reviews" className="gap-2">
                   <Star className="w-4 h-4" />
@@ -493,14 +644,28 @@ export default function Profile() {
                     {myBids.map(bid => (
                       <Link key={bid.id} to={`/listing/${bid.listing_id}`} className="block group">
                         <div className="bg-card rounded-lg border p-4 flex items-center justify-between group-hover:border-accent group-hover:shadow-md transition-all duration-200">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm group-hover:text-accent transition-colors">{bid.bidder_name || 'You'}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(bid.created_date), 'MMM d, yyyy HH:mm')}
-                            </p>
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0">
+                              <img src={bid.imageUrl} alt={bid?.listing?.title || 'Listing'} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate group-hover:text-accent transition-colors">{bid?.listing?.title || 'Listing'}</p>
+                              {bid?.placed_at && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  Bid placed {format(new Date(bid.placed_at), 'MMM d, yyyy HH:mm')}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <Badge className="bg-accent text-accent-foreground font-bold ml-3 shrink-0">
-                            €{bid.amount?.toFixed(2)}
+                          {bid?.listing?.auction_end && (
+                            <div className="mr-3 shrink-0">
+                              <div className="px-3 py-1 rounded-full border border-border/60 bg-muted/40">
+                                <AuctionTimer endDate={bid.listing.auction_end} compact />
+                              </div>
+                            </div>
+                          )}
+                          <Badge className={`${bid.isWinning ? 'bg-emerald-500 text-white' : 'bg-destructive text-destructive-foreground'} font-bold ml-3 shrink-0`}>
+                            €{(bid.my_bid != null ? Number(bid.my_bid) : 0).toFixed(2)}
                           </Badge>
                         </div>
                       </Link>
@@ -564,13 +729,18 @@ export default function Profile() {
                 {t('wallet.wallet')}
               </TabsTrigger>
             )}
+            <TabsTrigger value="bids" className="gap-1.5 flex-1 text-xs sm:text-sm">
+              <span className="relative">
+                <Gavel className="w-4 h-4" />
+                {hasUnseenOutbid && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                )}
+              </span>
+              {t('profile.myBids')} ({myBids.length})
+            </TabsTrigger>
             <TabsTrigger value="listings" className="gap-1.5 flex-1 text-xs sm:text-sm">
               <Package className="w-4 h-4" />
               {t('profile.myListings')} ({myListings.length})
-            </TabsTrigger>
-            <TabsTrigger value="bids" className="gap-1.5 flex-1 text-xs sm:text-sm">
-              <Gavel className="w-4 h-4" />
-              {t('profile.myBids')} ({myBids.length})
             </TabsTrigger>
             <TabsTrigger value="reviews" className="gap-1.5 flex-1 text-xs sm:text-sm">
               <Star className="w-4 h-4" />
@@ -644,27 +814,41 @@ export default function Profile() {
           </TabsContent>
 
           <TabsContent value="bids" className="mt-6">
-           {myBids.length === 0 ? (
-             <div className="text-center py-12 text-muted-foreground">{t('common.noResults')}</div>
-           ) : (
-             <div className="space-y-3">
-               {myBids.map(bid => (
-                 <Link key={bid.id} to={`/listing/${bid.listing_id}`} className="block group">
-                   <div className="bg-card rounded-lg border p-4 flex items-center justify-between group-hover:border-accent group-hover:shadow-md transition-all duration-200">
-                     <div className="flex-1">
-                       <p className="font-medium text-sm group-hover:text-accent transition-colors">{bid.bidder_name || 'You'}</p>
-                       <p className="text-xs text-muted-foreground">
-                         {format(new Date(bid.created_date), 'MMM d, yyyy HH:mm')}
-                       </p>
-                     </div>
-                     <Badge className="bg-accent text-accent-foreground font-bold ml-3 shrink-0">
-                       €{bid.amount?.toFixed(2)}
-                     </Badge>
-                   </div>
-                 </Link>
-               ))}
-             </div>
-           )}
+            {myBids.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">{t('common.noResults')}</div>
+            ) : (
+              <div className="space-y-3">
+                {myBids.map(bid => (
+                  <Link key={bid.id} to={`/listing/${bid.listing_id}`} className="block group">
+                    <div className="bg-card rounded-lg border p-4 flex items-center justify-between group-hover:border-accent group-hover:shadow-md transition-all duration-200">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0">
+                          <img src={bid.imageUrl} alt={bid?.listing?.title || 'Listing'} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate group-hover:text-accent transition-colors">{bid?.listing?.title || 'Listing'}</p>
+                          {bid?.placed_at && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              Bid placed {format(new Date(bid.placed_at), 'MMM d, yyyy HH:mm')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {bid?.listing?.auction_end && (
+                        <div className="mr-3 shrink-0">
+                          <div className="px-3 py-1 rounded-full border border-border/60 bg-muted/40">
+                            <AuctionTimer endDate={bid.listing.auction_end} compact />
+                          </div>
+                        </div>
+                      )}
+                      <Badge className={`${bid.isWinning ? 'bg-emerald-500 text-white' : 'bg-destructive text-destructive-foreground'} font-bold ml-3 shrink-0`}>
+                        €{(bid.my_bid != null ? Number(bid.my_bid) : 0).toFixed(2)}
+                      </Badge>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="edit" className="mt-6 space-y-6">

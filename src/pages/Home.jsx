@@ -16,13 +16,38 @@ export default function Home() {
   queryFn: async () => {
     const { data, error } = await supabase
       .from('listings')
-      .select('*, seller_profile:profiles(username,email)')
+      .select('*')
 
     if (error) {
       throw error
     }
 
-    return data
+    const rows = Array.isArray(data) ? data : []
+    const sellerIds = Array.from(
+      new Set(
+        rows
+          .map(l => l?.seller_id)
+          .filter(Boolean)
+      )
+    )
+
+    if (sellerIds.length === 0) return rows
+
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id,username,email')
+      .in('id', sellerIds)
+
+    if (profilesError) {
+      console.error('[Supabase] profiles fetch failed', profilesError)
+      return rows
+    }
+
+    const profileById = new Map((profilesData || []).map(p => [p.id, p]))
+    return rows.map(l => ({
+      ...l,
+      seller_profile: l?.seller_id ? (profileById.get(l.seller_id) || null) : null,
+    }))
   },
 });
 
