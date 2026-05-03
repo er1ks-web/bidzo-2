@@ -414,10 +414,10 @@ export default function Profile() {
 
   const avatarUrl = userProfile?.profile_picture_url;
 
-  const [activeTab, setActiveTab] = useState(enableWallet ? (isMobile ? 'wallet' : 'listings') : 'listings');
+  const [activeTab, setActiveTab] = useState(enableWallet ? (isMobile ? 'wallet' : 'bids') : 'bids');
 
   useEffect(() => {
-    setActiveTab(enableWallet ? (isMobile ? 'wallet' : 'listings') : 'listings');
+    setActiveTab(enableWallet ? (isMobile ? 'wallet' : 'bids') : 'bids');
   }, [isMobile]);
 
   useEffect(() => {
