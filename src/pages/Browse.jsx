@@ -41,7 +41,7 @@ export default function Browse() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('listings')
-        .select('*')
+        .select('*, seller_profile:profiles(username,email)')
         .eq('is_sold', false)
         .order('created_at', { ascending: false })
         .limit(100);

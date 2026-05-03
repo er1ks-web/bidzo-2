@@ -31,6 +31,14 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
   const isCancelled = status === 'cancelled' || status === 'canceled' || status.includes('cancel');
   const isSold = !isCancelled && (!!listing?.is_sold || ['sold', 'sold_pending', 'in_progress', 'completed'].includes(status));
 
+  const sellerProfile = listing?.seller_profile || null
+  const sellerEmail = listing?.seller_email || sellerProfile?.email || null
+  const sellerDisplayName =
+    listing?.seller_name ||
+    listing?.seller_username ||
+    sellerProfile?.username ||
+    (sellerEmail ? String(sellerEmail).split('@')[0] : null)
+
   const displayPrice = isAuction
     ? (listing.current_bid != null ? listing.current_bid : listing.price)
     : listing.price;
@@ -123,7 +131,7 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
                 >
                   <User className="w-3 h-3" />
-                  <span className="truncate">{listing.seller_name || t('profile.seller') || 'Seller'}</span>
+                  <span className="truncate">{sellerDisplayName || 'Seller'}</span>
                 </Link>
               </div>
             )}

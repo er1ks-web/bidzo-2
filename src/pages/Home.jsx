@@ -16,7 +16,7 @@ export default function Home() {
   queryFn: async () => {
     const { data, error } = await supabase
       .from('listings')
-      .select('*')
+      .select('*, seller_profile:profiles(username,email)')
 
     if (error) {
       throw error
