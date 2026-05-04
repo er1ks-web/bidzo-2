@@ -15,8 +15,8 @@ import TopUpModal from '@/components/wallet/TopUpModal';
 import ImageUploader from '@/components/listings/ImageUploader';
 import { cn } from '@/lib/utils';
 import { ENABLE_WALLET } from '@/lib/featureFlags';
+import { CATEGORIES, SUBCATEGORIES, getActiveFilterKeys } from '@/lib/categories';
 
-const CATEGORIES = ['electronics', 'vehicles', 'fashion', 'home', 'sports', 'collectibles', 'books', 'toys', 'garden', 'other'];
 const CONDITIONS = ['new', 'like_new', 'good', 'fair', 'poor'];
 const LOCATIONS = ['riga', 'daugavpils', 'liepaja', 'jelgava', 'jurmala', 'ventspils', 'rezekne', 'valmiera', 'jekabpils', 'ogre', 'tukums', 'cesis', 'other'];
 const DURATIONS = [
@@ -41,6 +41,7 @@ export default function CreateListing() {
     title: '',
     description: '',
     category: '',
+    subcategory: '',
     condition: 'good',
     listing_type: 'auction',
     price: '',
@@ -48,7 +49,17 @@ export default function CreateListing() {
     buy_now_price: '',
     duration: '7',
     location: 'riga',
+    location_custom: '',
     images: [],
+    brand: '',
+    model: '',
+    year: '',
+    fuel: '',
+    mileage: '',
+    transmission: '',
+    size: '',
+    rooms: '',
+    area: '',
   });
 
   const enableWallet = ENABLE_WALLET;
@@ -92,6 +103,9 @@ export default function CreateListing() {
     setEligibility(checkPublishEligibility(ws));
   };
 
+  const activeFilterKeys = getActiveFilterKeys(form.category, form.subcategory);
+  const activeSubcategories = SUBCATEGORIES[form.category] || [];
+
   const handleImagesAdded = (urls) => {
     setForm(f => ({ ...f, images: [...f.images, ...urls] }));
   };
@@ -103,7 +117,10 @@ export default function CreateListing() {
   const validate = () => {
     const errors = [];
     if (!form.title.trim()) errors.push('Title is required');
+    if (!form.description.trim()) errors.push('Description is required');
+    if (activeFilterKeys.includes('brand') && !form.brand.trim()) errors.push('Brand is required');
     if (!form.category) errors.push('Category is required');
+    if (form.category && activeSubcategories.length > 0 && !form.subcategory) errors.push('Subcategory is required');
     if (!form.price || parseFloat(form.price) <= 0) errors.push(`${form.listing_type === 'auction' ? 'Starting price' : 'Price'} must be greater than 0`);
     if (!form.location) errors.push('Location is required');
     if (form.images.length === 0) errors.push('At least one photo is required');
@@ -147,10 +164,12 @@ export default function CreateListing() {
       title: form.title,
       description: form.description,
       category: form.category,
+      subcategory: form.subcategory || null,
       condition: form.condition,
       listing_type: form.listing_type,
       price: parseFloat(form.price),
       location: form.location,
+      location_custom: form.location_custom || null,
       images: form.images,
       seller_id: user?.id,
       status: 'active',
@@ -158,6 +177,15 @@ export default function CreateListing() {
       bid_count: 0,
       published: true,
       is_sold: false,
+      brand: form.brand || null,
+      model: form.model || null,
+      fuel: form.fuel || null,
+      transmission: form.transmission || null,
+      size: form.size || null,
+      year: form.year ? parseInt(form.year) : null,
+      mileage: form.mileage ? parseInt(form.mileage) : null,
+      rooms: form.rooms ? parseInt(form.rooms) : null,
+      area: form.area ? parseInt(form.area) : null,
     };
 
     if (form.listing_type === 'auction') {
@@ -240,7 +268,13 @@ export default function CreateListing() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label>{t('create.category')} *</Label>
-            <Select value={form.category} onValueChange={(v) => { setForm(f => ({ ...f, category: v })); setValidationErrors([]); }}>
+            <Select
+              value={form.category}
+              onValueChange={(v) => {
+                setForm(f => ({ ...f, category: v, subcategory: '' }));
+                setValidationErrors([]);
+              }}
+            >
               <SelectTrigger className={cn("mt-1.5", validationErrors.some(e => e.includes('Category')) && "border-destructive ring-1 ring-destructive")}><SelectValue placeholder={t('create_extra.selectCategory')} /></SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map(c => (
@@ -261,6 +295,104 @@ export default function CreateListing() {
             </Select>
           </div>
         </div>
+
+        {/* Subcategory */}
+        {form.category && activeSubcategories.length > 0 && (
+          <div>
+            <Label>{t('create_extra.subcategory')} *</Label>
+            <Select
+              value={form.subcategory}
+              onValueChange={(v) => {
+                setForm(f => ({ ...f, subcategory: v }))
+                setValidationErrors([])
+              }}
+            >
+              <SelectTrigger
+                className={cn(
+                  'mt-1.5',
+                  validationErrors.some(e => e.includes('Subcategory')) && 'border-destructive ring-1 ring-destructive'
+                )}
+              >
+                <SelectValue placeholder={t('create_extra.selectSubcategory')} />
+              </SelectTrigger>
+              <SelectContent>
+                {activeSubcategories.map(sc => (
+                  <SelectItem key={sc} value={sc}>{t(`subcategories.${form.category}.${sc}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Dynamic fields (by category) */}
+        {activeFilterKeys.includes('brand') && (
+          <div>
+            <Label>{t('filters.brand')} *</Label>
+            <Input value={form.brand} onChange={(e) => setForm(f => ({ ...f, brand: e.target.value }))} className="mt-1.5" />
+          </div>
+        )}
+
+        {activeFilterKeys.includes('model') && (
+          <div>
+            <Label>{t('filters.model')}</Label>
+            <Input value={form.model} onChange={(e) => setForm(f => ({ ...f, model: e.target.value }))} className="mt-1.5" />
+          </div>
+        )}
+
+        {activeFilterKeys.includes('year') && (
+          <div>
+            <Label>{t('filters.year')}</Label>
+            <Input type="number" value={form.year} onChange={(e) => setForm(f => ({ ...f, year: e.target.value }))} className="mt-1.5" />
+          </div>
+        )}
+
+        {activeFilterKeys.includes('fuel') && (
+          <div>
+            <Label>{t('filters.fuel')}</Label>
+            <Input value={form.fuel} onChange={(e) => setForm(f => ({ ...f, fuel: e.target.value }))} className="mt-1.5" />
+          </div>
+        )}
+
+        {activeFilterKeys.includes('mileage') && (
+          <div>
+            <Label>{t('filters.mileageKm')}</Label>
+            <Input type="number" value={form.mileage} onChange={(e) => setForm(f => ({ ...f, mileage: e.target.value }))} className="mt-1.5" />
+          </div>
+        )}
+
+        {activeFilterKeys.includes('transmission') && (
+          <div>
+            <Label>{t('filters.transmission')}</Label>
+            <Select value={form.transmission} onValueChange={(v) => setForm(f => ({ ...f, transmission: v }))}>
+              <SelectTrigger className="mt-1.5"><SelectValue placeholder={t('filters.selectTransmission')} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="manual">{t('filters.transmissionManual')}</SelectItem>
+                <SelectItem value="automatic">{t('filters.transmissionAutomatic')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {activeFilterKeys.includes('size') && (
+          <div>
+            <Label>{t('filters.size')}</Label>
+            <Input value={form.size} onChange={(e) => setForm(f => ({ ...f, size: e.target.value }))} className="mt-1.5" />
+          </div>
+        )}
+
+        {activeFilterKeys.includes('rooms') && (
+          <div>
+            <Label>{t('filters.rooms')}</Label>
+            <Input type="number" value={form.rooms} onChange={(e) => setForm(f => ({ ...f, rooms: e.target.value }))} className="mt-1.5" />
+          </div>
+        )}
+
+        {activeFilterKeys.includes('area') && (
+          <div>
+            <Label>{t('filters.areaM2')}</Label>
+            <Input type="number" value={form.area} onChange={(e) => setForm(f => ({ ...f, area: e.target.value }))} className="mt-1.5" />
+          </div>
+        )}
 
         {/* Price */}
         <div>
@@ -300,23 +432,25 @@ export default function CreateListing() {
            </div>
          )}
 
-        {/* Duration & Location */}
-        <div className="grid grid-cols-2 gap-4">
-          {form.listing_type === 'auction' && (
-            <div>
-              <Label>{t('create.duration')}</Label>
-              <Select value={form.duration} onValueChange={(v) => setForm(f => ({ ...f, duration: v }))}>
-                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {DURATIONS.map(d => (
-                    <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+        {/* Duration */}
+        {form.listing_type === 'auction' && (
           <div>
-            <Label>{t('create.location')} *</Label>
+            <Label>{t('create.duration')}</Label>
+            <Select value={form.duration} onValueChange={(v) => setForm(f => ({ ...f, duration: v }))}>
+              <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {DURATIONS.map(d => (
+                  <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Region & Location */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label>{t('create.region')} *</Label>
             <Select value={form.location} onValueChange={(v) => setForm(f => ({ ...f, location: v }))}>
               <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -325,6 +459,16 @@ export default function CreateListing() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label>{t('create.location')}</Label>
+            <Input
+              value={form.location_custom}
+              onChange={(e) => setForm(f => ({ ...f, location_custom: e.target.value }))}
+              placeholder={t('create_extra.locationPlaceholder')}
+              className="mt-1.5"
+            />
           </div>
         </div>
 

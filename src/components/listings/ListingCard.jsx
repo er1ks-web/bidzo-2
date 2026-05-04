@@ -96,7 +96,10 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
             </h3>
             <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
               <MapPin className="w-3 h-3" />
-              <span>{LOCATION_NAMES[listing.location] || listing.location}</span>
+              <span>
+                {LOCATION_NAMES[listing.location] || listing.location}
+                {listing.location_custom ? ` · ${listing.location_custom}` : ''}
+              </span>
             </div>
 
             <div className="mt-3 flex items-end justify-between">

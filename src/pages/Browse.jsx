@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabase';
+import { useI18n } from '@/lib/i18n';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -8,11 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
 import ListingCard from '@/components/listings/ListingCard';
 import CategoryGrid from '@/components/listings/CategoryGrid';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CATEGORIES, SUBCATEGORIES, FILTERS, getActiveFilterKeys, normalizeCategory, normalizeTextKey } from '@/lib/categories';
 
-const CATEGORIES = ['electronics', 'vehicles', 'fashion', 'home', 'sports', 'collectibles', 'books', 'toys', 'garden', 'other'];
 const LOCATIONS = ['riga', 'daugavpils', 'liepaja', 'jelgava', 'jurmala', 'ventspils', 'rezekne', 'valmiera', 'jekabpils', 'ogre', 'tukums', 'cesis', 'other'];
 
 export default function Browse() {
@@ -23,6 +24,16 @@ export default function Browse() {
   const [searchQuery, setSearchQuery] = useState(params.get('q') || '');
   const [listingType, setListingType] = useState(params.get('type') || 'all');
   const [category, setCategory] = useState(params.get('category') || 'all');
+  const [subcategory, setSubcategory] = useState(params.get('subcategory') || 'all');
+  const [brand, setBrand] = useState(normalizeTextKey(params.get('brand') || ''));
+  const [model, setModel] = useState(params.get('model') || '');
+  const [minYear, setMinYear] = useState(params.get('minYear') || '');
+  const [fuel, setFuel] = useState(params.get('fuel') || '');
+  const [maxMileage, setMaxMileage] = useState(params.get('maxMileage') || '');
+  const [transmission, setTransmission] = useState(params.get('transmission') || '');
+  const [size, setSize] = useState(params.get('size') || '');
+  const [minRooms, setMinRooms] = useState(params.get('minRooms') || '');
+  const [minArea, setMinArea] = useState(params.get('minArea') || '');
   const [loc, setLoc] = useState('all');
   const [sortBy, setSortBy] = useState(params.get('sort') || 'newest');
   const [showFilters, setShowFilters] = useState(false);
@@ -31,10 +42,37 @@ export default function Browse() {
   useEffect(() => {
     const p = new URLSearchParams(location.search);
     setCategory(p.get('category') || 'all');
+    setSubcategory(p.get('subcategory') || 'all');
     setListingType(p.get('type') || 'all');
     setSortBy(p.get('sort') || 'newest');
     setSearchQuery(p.get('q') || '');
+    setBrand(normalizeTextKey(p.get('brand') || ''));
+    setModel(p.get('model') || '');
+    setMinYear(p.get('minYear') || '');
+    setFuel(p.get('fuel') || '');
+    setMaxMileage(p.get('maxMileage') || '');
+    setTransmission(p.get('transmission') || '');
+    setSize(p.get('size') || '');
+    setMinRooms(p.get('minRooms') || '');
+    setMinArea(p.get('minArea') || '');
   }, [location.search]);
+
+  const normalizedSelectedCategory = category === 'all' ? 'all' : normalizeCategory(category);
+  const activeSubcategories = normalizedSelectedCategory === 'all' ? [] : (SUBCATEGORIES[normalizedSelectedCategory] || []);
+  const activeFilterKeys = normalizedSelectedCategory === 'all' ? [] : getActiveFilterKeys(normalizedSelectedCategory, subcategory === 'all' ? '' : subcategory);
+
+  useEffect(() => {
+    setSubcategory('all');
+    setBrand('');
+    setModel('');
+    setMinYear('');
+    setFuel('');
+    setMaxMileage('');
+    setTransmission('');
+    setSize('');
+    setMinRooms('');
+    setMinArea('');
+  }, [normalizedSelectedCategory]);
 
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ['listings-browse'],
@@ -88,6 +126,22 @@ export default function Browse() {
     },
   });
 
+  const brandOptions = useMemo(() => {
+    if (!Array.isArray(listings) || normalizedSelectedCategory === 'all') return [];
+    const map = new Map();
+    for (const l of listings) {
+      if (!l?.brand) continue;
+      if (normalizeCategory(l?.category) !== normalizedSelectedCategory) continue;
+      if (subcategory !== 'all' && (l?.subcategory || '') !== subcategory) continue;
+      const norm = normalizeTextKey(l.brand);
+      if (!norm) continue;
+      if (!map.has(norm)) map.set(norm, norm.toUpperCase());
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .map(([value, label]) => ({ value, label }));
+  }, [listings, normalizedSelectedCategory, subcategory]);
+
   const filtered = useMemo(() => {
     let result = [...listings];
 
@@ -111,20 +165,111 @@ export default function Browse() {
     if (listingType === 'fixed') result = result.filter(l => l.listing_type === 'fixed');
 
     // Category
-    if (category !== 'all') result = result.filter(l => l.category === category);
+    if (normalizedSelectedCategory !== 'all') {
+      result = result.filter(l => normalizeCategory(l?.category) === normalizedSelectedCategory);
+    }
+
+    // Subcategory
+    if (normalizedSelectedCategory !== 'all' && subcategory !== 'all') {
+      result = result.filter(l => (l?.subcategory || '') === subcategory);
+    }
+
+    // Dynamic filters
+    if (normalizedSelectedCategory !== 'all') {
+      const normBrand = normalizeTextKey(brand);
+      if (activeFilterKeys.includes('brand') && normBrand) {
+        result = result.filter(l => normalizeTextKey(l?.brand) === normBrand);
+      }
+
+      const normModel = normalizeTextKey(model);
+      if (activeFilterKeys.includes('model') && normModel) {
+        result = result.filter(l => normalizeTextKey(l?.model) === normModel);
+      }
+
+      const y = Number(minYear);
+      if (activeFilterKeys.includes('year') && Number.isFinite(y) && y > 0) {
+        result = result.filter(l => {
+          const ly = Number(l?.year);
+          return Number.isFinite(ly) && ly >= y;
+        });
+      }
+
+      const normFuel = fuel.trim().toLowerCase();
+      if (activeFilterKeys.includes('fuel') && normFuel) {
+        result = result.filter(l => (l?.fuel || '').toString().toLowerCase() === normFuel);
+      }
+
+      const mm = Number(maxMileage);
+      if (activeFilterKeys.includes('mileage') && Number.isFinite(mm) && mm > 0) {
+        result = result.filter(l => {
+          const lm = Number(l?.mileage);
+          return Number.isFinite(lm) && lm <= mm;
+        });
+      }
+
+      const normTrans = transmission.trim().toLowerCase();
+      if (activeFilterKeys.includes('transmission') && normTrans) {
+        result = result.filter(l => (l?.transmission || '').toString().toLowerCase() === normTrans);
+      }
+
+      const normSize = size.trim().toLowerCase();
+      if (activeFilterKeys.includes('size') && normSize) {
+        result = result.filter(l => (l?.size || '').toString().toLowerCase() === normSize);
+      }
+
+      const mr = Number(minRooms);
+      if (activeFilterKeys.includes('rooms') && Number.isFinite(mr) && mr > 0) {
+        result = result.filter(l => {
+          const lr = Number(l?.rooms);
+          return Number.isFinite(lr) && lr >= mr;
+        });
+      }
+
+      const ma = Number(minArea);
+      if (activeFilterKeys.includes('area') && Number.isFinite(ma) && ma > 0) {
+        result = result.filter(l => {
+          const la = Number(l?.area);
+          return Number.isFinite(la) && la >= ma;
+        });
+      }
+    }
 
     // Location
     if (loc !== 'all') result = result.filter(l => l.location === loc);
 
     // Sort
-    if (sortBy === 'price_asc') result.sort((a, b) => (a.price || 0) - (b.price || 0));
-    else if (sortBy === 'price_desc') result.sort((a, b) => (b.price || 0) - (a.price || 0));
-    else if (sortBy === 'ending_soon') result = result.filter(l => l.auction_end && new Date(l.auction_end) > new Date()).sort((a, b) => new Date(a.auction_end) - new Date(b.auction_end));
+    if (sortBy === 'price_asc') result.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+    else if (sortBy === 'price_desc') result.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+    else if (sortBy === 'ending_soon') {
+      const nowTs = Date.now()
+      result = result
+        .filter(l => l.auction_end && new Date(l.auction_end).getTime() > nowTs)
+        .sort((a, b) => new Date(a.auction_end).getTime() - new Date(b.auction_end).getTime());
+    }
     else if (sortBy === 'most_bids') result.sort((a, b) => (b.bid_count || 0) - (a.bid_count || 0));
     // newest is default sort from API
 
     return result;
-  }, [listings, searchQuery, listingType, category, loc, sortBy]);
+  }, [
+    listings,
+    searchQuery,
+    listingType,
+    category,
+    subcategory,
+    brand,
+    model,
+    minYear,
+    fuel,
+    maxMileage,
+    transmission,
+    size,
+    minRooms,
+    minArea,
+    loc,
+    sortBy,
+    normalizedSelectedCategory,
+    activeFilterKeys,
+  ]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
@@ -179,9 +324,23 @@ export default function Browse() {
             </SelectContent>
           </Select>
 
+          {normalizedSelectedCategory !== 'all' && activeSubcategories.length > 0 && (
+            <Select value={subcategory} onValueChange={setSubcategory}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder={t('create_extra.subcategory')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('filters.all')}</SelectItem>
+                {activeSubcategories.map(sc => (
+                  <SelectItem key={sc} value={sc}>{t(`subcategories.${normalizedSelectedCategory}.${sc}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <Select value={loc} onValueChange={setLoc}>
             <SelectTrigger className="w-40">
-              <SelectValue placeholder={t('create.location')} />
+              <SelectValue placeholder={t('create.region')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('filters.all')}</SelectItem>
@@ -190,6 +349,98 @@ export default function Browse() {
                ))}
             </SelectContent>
           </Select>
+
+          {normalizedSelectedCategory !== 'all' && activeFilterKeys.includes('brand') && (
+            <Select value={brand || 'all'} onValueChange={(v) => setBrand(v === 'all' ? '' : v)}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder={t('filters.brand')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('filters.all')}</SelectItem>
+                {brandOptions.map(({ value, label }) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {normalizedSelectedCategory !== 'all' && activeFilterKeys.includes('model') && (
+            <Input
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder={t('filters.model')}
+              className="w-40"
+            />
+          )}
+
+          {normalizedSelectedCategory !== 'all' && activeFilterKeys.includes('year') && (
+            <Input
+              type="number"
+              value={minYear}
+              onChange={(e) => setMinYear(e.target.value)}
+              placeholder={t('filters.year')}
+              className="w-40"
+            />
+          )}
+
+          {normalizedSelectedCategory !== 'all' && activeFilterKeys.includes('fuel') && (
+            <Input
+              value={fuel}
+              onChange={(e) => setFuel(e.target.value)}
+              placeholder={t('filters.fuel')}
+              className="w-40"
+            />
+          )}
+
+          {normalizedSelectedCategory !== 'all' && activeFilterKeys.includes('mileage') && (
+            <Input
+              type="number"
+              value={maxMileage}
+              onChange={(e) => setMaxMileage(e.target.value)}
+              placeholder={t('filters.mileageKm')}
+              className="w-40"
+            />
+          )}
+
+          {normalizedSelectedCategory !== 'all' && activeFilterKeys.includes('transmission') && (
+            <Input
+              value={transmission}
+              onChange={(e) => setTransmission(e.target.value)}
+              placeholder={t('filters.transmission')}
+              className="w-44"
+            />
+          )}
+
+          {normalizedSelectedCategory !== 'all' && activeFilterKeys.includes('size') && (
+            <Input
+              value={size}
+              onChange={(e) => setSize(e.target.value)}
+              placeholder={t('filters.size')}
+              className="w-40"
+            />
+          )}
+
+          {normalizedSelectedCategory !== 'all' && activeFilterKeys.includes('rooms') && (
+            <Input
+              type="number"
+              value={minRooms}
+              onChange={(e) => setMinRooms(e.target.value)}
+              placeholder={t('filters.roomsMin')}
+              className="w-40"
+            />
+          )}
+
+          {normalizedSelectedCategory !== 'all' && activeFilterKeys.includes('area') && (
+            <Input
+              type="number"
+              value={minArea}
+              onChange={(e) => setMinArea(e.target.value)}
+              placeholder={t('filters.areaMin')}
+              className="w-40"
+            />
+          )}
 
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-44">

@@ -648,7 +648,10 @@ export default function ListingDetail() {
           <div className="bg-card rounded-xl border p-4 sm:p-5 space-y-2 sm:space-y-3">
             <div className="flex items-center gap-2 text-sm">
               <MapPin className="w-4 h-4 text-muted-foreground" />
-              <span>{LOCATION_NAMES[listing.location] || listing.location}</span>
+              <span>
+                {LOCATION_NAMES[listing.location] || listing.location}
+                {listing.location_custom ? ` · ${listing.location_custom}` : ''}
+              </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Eye className="w-4 h-4 text-muted-foreground" />
