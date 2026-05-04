@@ -389,6 +389,10 @@ export default function Profile() {
     ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
     : null;
 
+  const restrictionUntil = userProfile?.restricted_until ? new Date(userProfile.restricted_until) : null
+  const isTimeRestricted = !!(restrictionUntil && restrictionUntil.getTime() > Date.now())
+  const isRestricted = userProfile?.can_bid === false || userProfile?.can_create_listings === false || isTimeRestricted
+
   const refreshWallet = async () => {
     if (!user || !enableWallet) return;
     const ws = await getWalletState(user.id);
@@ -499,6 +503,14 @@ export default function Profile() {
               {t('profile.memberSince')} {user.created_date ? format(new Date(user.created_date), 'MMM yyyy') : '2024'}
             </div>
           </div>
+
+          {isRestricted && (
+            <p className="mt-2 text-sm text-destructive">
+              {isTimeRestricted
+                ? `Your account is banned till ${restrictionUntil.toLocaleString()}`
+                : 'Your account is banned'}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button

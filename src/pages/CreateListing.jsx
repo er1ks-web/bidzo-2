@@ -34,6 +34,8 @@ export default function CreateListing() {
   const [walletState, setWalletState] = useState(null);
   const [eligibility, setEligibility] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreateRestricted, setIsCreateRestricted] = useState(false);
+  const [createRestrictedUntil, setCreateRestrictedUntil] = useState(null);
   const [showTopUp, setShowTopUp] = useState(false);
   const [showConfirmPublish, setShowConfirmPublish] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
@@ -80,6 +82,16 @@ export default function CreateListing() {
       if (profileError) console.log(profileError)
 
       const profile = Array.isArray(profileData) ? profileData[0] : null
+      try {
+        const canCreate = profile?.can_create_listings;
+        const until = profile?.restricted_until ? new Date(profile.restricted_until) : null;
+        const timeRestricted = !!(until && until.getTime() > Date.now());
+        setIsCreateRestricted(canCreate === false || timeRestricted);
+        setCreateRestrictedUntil(timeRestricted ? until : null);
+      } catch (e) {
+        setIsCreateRestricted(false);
+        setCreateRestrictedUntil(null);
+      }
       const u = {
         email: authUser.email,
         full_name: profile?.full_name || authUser.user_metadata?.full_name || authUser.email,
@@ -128,6 +140,10 @@ export default function CreateListing() {
   };
 
   const handleSubmit = async () => {
+    if (isCreateRestricted) {
+      toast.error('Your account is restricted from creating listings.');
+      return;
+    }
     const errors = validate();
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -215,7 +231,15 @@ export default function CreateListing() {
     toast.success('Listing published!');
     window.location.href = '/profile';
     } catch (err) {
-      toast.error('Something went wrong. Please try again.');
+      const msg = String(err?.message || '').toLowerCase();
+      const code = err?.code;
+      const isRls = msg.includes('row-level security') || msg.includes('row level security');
+      const isPermission = code === '42501' || msg.includes('permission') || msg.includes('not allowed');
+      if (isRls || isPermission) {
+        toast.error('Your account is restricted from creating listings.');
+      } else {
+        toast.error('Something went wrong. Please try again.');
+      }
       setIsSubmitting(false);
     }
   };
@@ -521,10 +545,32 @@ export default function CreateListing() {
           </div>
         )}
 
+        {isCreateRestricted && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 flex gap-3">
+            <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-destructive">You cannot publish listings right now</p>
+              {createRestrictedUntil ? (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Restricted until: {createRestrictedUntil.toLocaleString()}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Your account is restricted from creating listings.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Submit */}
         <Button
           onClick={() => {
             if (isSubmitting) return;
+            if (isCreateRestricted) {
+              toast.error('Your account is restricted from creating listings.');
+              return;
+            }
             const errors = validate();
             if (errors.length > 0) {
               setValidationErrors(errors);
@@ -533,7 +579,7 @@ export default function CreateListing() {
             setValidationErrors([]);
             setShowConfirmPublish(true);
           }}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isCreateRestricted}
           className="w-full h-12 bg-accent hover:bg-accent/90 text-accent-foreground text-lg font-semibold disabled:opacity-60"
         >
           {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : t('create.publish')}
@@ -577,7 +623,7 @@ export default function CreateListing() {
                   setShowConfirmPublish(false);
                   handleSubmit();
                 }}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isCreateRestricted}
                 className="flex-1 h-9 rounded-md bg-accent hover:bg-accent/90 text-accent-foreground text-sm font-medium transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('create_extra.publish')}
