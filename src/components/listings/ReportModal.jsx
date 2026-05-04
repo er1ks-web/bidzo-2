@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/supabase';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -17,18 +17,26 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Flag } from 'lucide-react';
 
-export default function ReportModal({ listing, triggerClassName = '', triggerSize = 'sm' }) {
+export default function ReportModal({
+  listing,
+  triggerClassName = '',
+  triggerSize = 'sm',
+  sellerName: sellerNameOverride = null,
+  sellerEmail: sellerEmailOverride = null,
+}) {
   const { user, requireLogin } = useAuth();
   const [reportDetails, setReportDetails] = useState('');
   const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleReport = () => {
+  const handleReport = async () => {
     if (!user) {
       requireLogin('Log in to report listings');
       return;
     }
 
-    const sellerEmail = listing.seller_email;
+    const sellerEmail = sellerEmailOverride || listing.seller_email || null;
+    const sellerName = sellerNameOverride || listing.seller_name || (sellerEmail ? sellerEmail.split('@')[0] : 'Seller');
     const reporterEmail = user.email;
     const listingTitle = listing.title;
     const listingUrl = window.location.href;
@@ -55,24 +63,58 @@ Please review this report and take appropriate action if necessary.
 `;
 
     const mailtoLink = `mailto:support@bidzo.app?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    
-    // Track report event
-    base44.analytics.track({
-      eventName: 'listing_reported',
-      properties: {
+
+    setSubmitting(true);
+    try {
+      const basePayload = {
         listing_id: listing.id,
-        listing_title: listing.title,
-        seller_email: listing.seller_email,
-        category: listing.category,
-        price: listing.current_bid || listing.price,
-        has_details: !!reportDetails,
+        reporter_id: user.id,
+        reason: 'other',
+        details: reportDetails || null,
+        status: 'pending',
+      };
+
+      const extendedPayload = {
+        ...basePayload,
+        reporter_email: reporterEmail,
+        seller_id: listing.seller_id || null,
+        seller_email: sellerEmail,
+        seller_name: sellerName,
+        listing_title: listingTitle,
+        listing_category: listing.category || null,
+        listing_subcategory: listing.subcategory || null,
+        listing_url: listingUrl,
+      };
+
+      let insertErr = null;
+      {
+        const { error } = await supabase.from('reports').insert(extendedPayload);
+        insertErr = error;
       }
-    });
-    
-    window.location.href = mailtoLink;
-    setOpen(false);
-    setReportDetails('');
-    toast.success('Opening email client to submit your report...');
+
+      // If optional columns don't exist, retry with core columns only
+      if (insertErr && insertErr.code === 'PGRST204') {
+        console.log(insertErr);
+        const { error } = await supabase.from('reports').insert(basePayload);
+        insertErr = error;
+      }
+
+      if (insertErr) {
+        console.log(insertErr);
+        toast.error('Failed to submit report. Please try again.');
+        return;
+      }
+
+      toast.success('Report submitted. Opening email client...');
+      window.location.href = mailtoLink;
+      setOpen(false);
+      setReportDetails('');
+    } catch (err) {
+      console.log(err);
+      toast.error('Failed to submit report. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -91,14 +133,14 @@ Please review this report and take appropriate action if necessary.
         <AlertDialogHeader>
           <AlertDialogTitle>Report this listing</AlertDialogTitle>
           <AlertDialogDescription>
-            Report "{listing.title}" by {listing.seller_name}. Your email client will open with pre-filled information.
+            Report "{listing.title}" by {sellerNameOverride || listing.seller_name || 'Seller'}. Your email client will open with pre-filled information.
           </AlertDialogDescription>
         </AlertDialogHeader>
         
         <div className="space-y-3 py-4">
           <div className="text-xs space-y-1 bg-muted/50 p-2 rounded">
             <p><strong>Listing:</strong> {listing.title}</p>
-            <p><strong>Seller:</strong> {listing.seller_name} ({listing.seller_email})</p>
+            <p><strong>Seller:</strong> {(sellerNameOverride || listing.seller_name || 'Seller')} ({sellerEmailOverride || listing.seller_email || '—'})</p>
             <p><strong>ID:</strong> {listing.id}</p>
           </div>
           
@@ -120,6 +162,7 @@ Please review this report and take appropriate action if necessary.
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction 
             onClick={handleReport}
+            disabled={submitting}
             className="bg-destructive hover:bg-destructive/90"
           >
             Submit Report

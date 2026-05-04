@@ -21,6 +21,7 @@ import DeleteListingModal from '@/components/listings/DeleteListingModal';
 import StarRatingDisplay from '@/components/reviews/StarRatingDisplay';
 import { useUserRating } from '@/lib/useUserRating';
 import { cn } from '@/lib/utils';
+import { getActiveFilterKeys, normalizeCategory } from '@/lib/categories';
 import { toast } from 'sonner';
 
 const LOCATION_NAMES = {
@@ -196,6 +197,47 @@ export default function ListingDetail() {
 
   const isAuction = listing?.listing_type === 'auction';
   const isOwner = user?.id === listing?.seller_id;
+
+  const normalizedListingCategory = listing?.category ? normalizeCategory(listing.category) : '';
+  const activeDetailKeys = getActiveFilterKeys(normalizedListingCategory, listing?.subcategory || '');
+  const detailItems = (() => {
+    if (!listing || !Array.isArray(activeDetailKeys)) return [];
+
+    const items = [];
+
+    const push = (key, label, value) => {
+      if (!activeDetailKeys.includes(key)) return;
+      if (value == null) return;
+      const v = String(value).trim();
+      if (!v) return;
+      items.push({ key, label, value: v });
+    };
+
+    push('brand', t('filters.brand'), listing.brand ? String(listing.brand).toUpperCase() : listing.brand);
+    push('model', t('filters.model'), listing.model);
+    push('year', t('filters.year'), listing.year);
+
+    if (activeDetailKeys.includes('mileage') && listing.mileage != null && String(listing.mileage).trim() !== '') {
+      items.push({ key: 'mileage', label: t('filters.mileageKm'), value: String(listing.mileage).trim() });
+    }
+
+    if (activeDetailKeys.includes('transmission') && listing.transmission) {
+      const norm = String(listing.transmission).toLowerCase();
+      const label = t('filters.transmission');
+      const value = norm === 'manual'
+        ? t('filters.transmissionManual')
+        : norm === 'automatic'
+          ? t('filters.transmissionAutomatic')
+          : String(listing.transmission);
+      push('transmission', label, value);
+    }
+
+    push('size', t('filters.size'), listing.size);
+    push('rooms', t('filters.rooms'), listing.rooms);
+    push('area', t('filters.areaM2'), listing.area);
+
+    return items;
+  })();
 
   const { data: sellerProfile } = useQuery({
     queryKey: ['seller-profile', listing?.seller_id],
@@ -597,10 +639,10 @@ export default function ListingDetail() {
 
           {/* Locked notice for owner of published listing */}
           {isOwner && listing.published && (
-            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 flex gap-3">
+            <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 flex gap-3">
               <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-sm text-destructive">Published listings cannot be edited</p>
+                <p className="font-semibold text-sm text-accent">Published listings cannot be edited</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   This listing is locked and cannot be modified. If you need to make changes, please contact support.
                 </p>
@@ -659,6 +701,19 @@ export default function ListingDetail() {
             </div>
           </div>
 
+          {detailItems.length > 0 && (
+            <div className="bg-card rounded-xl border p-4 sm:p-5">
+              <div className="grid grid-cols-1 gap-2">
+                {detailItems.map((it) => (
+                  <div key={it.key} className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-muted-foreground">{it.label}</span>
+                    <span className="font-medium text-right">{it.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Seller info */}
           <div className="bg-card rounded-xl border p-4 sm:p-5">
             <p className="text-sm text-muted-foreground mb-3">{t('listing.seller')}</p>
@@ -700,16 +755,22 @@ export default function ListingDetail() {
           <div className="flex gap-2 flex-wrap">
             <WatchButton listingId={listingId} user={user} requireLogin={requireLogin} className="flex-1" />
             <ShareButton listing={listing} className="flex-1" />
-            <ReportModal listing={listing} triggerClassName="flex-1" triggerSize="sm" />
+            <ReportModal
+              listing={listing}
+              sellerName={sellerName}
+              sellerEmail={sellerEmail}
+              triggerClassName="flex-1 border-destructive text-destructive"
+              triggerSize="sm"
+            />
           </div>
 
           {/* Delete button — owner only */}
           {isOwner && (
             <Button
-              variant="destructive"
+              variant="outline"
               size="sm"
               onClick={() => setShowDeleteModal(true)}
-              className="w-full gap-2"
+              className="w-full gap-2 text-destructive border-transparent hover:bg-destructive hover:text-black hover:border-transparent"
             >
               <Trash2 className="w-4 h-4" />
               Delete Listing
