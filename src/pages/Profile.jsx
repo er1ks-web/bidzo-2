@@ -389,7 +389,25 @@ export default function Profile() {
     ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
     : null;
 
-  const restrictionUntil = userProfile?.restricted_until ? new Date(userProfile.restricted_until) : null
+  const restrictionUntilCandidates = [
+    userProfile?.restricted_until,
+    userProfile?.bid_restricted_until,
+    userProfile?.listing_restricted_until,
+  ]
+    .filter(Boolean)
+    .map((v) => {
+      try {
+        return new Date(v)
+      } catch (e) {
+        return null
+      }
+    })
+    .filter(Boolean)
+
+  const restrictionUntil = restrictionUntilCandidates.length
+    ? restrictionUntilCandidates.reduce((max, d) => (d.getTime() > max.getTime() ? d : max), restrictionUntilCandidates[0])
+    : null
+
   const isTimeRestricted = !!(restrictionUntil && restrictionUntil.getTime() > Date.now())
   const isRestricted = userProfile?.can_bid === false || userProfile?.can_create_listings === false || isTimeRestricted
 

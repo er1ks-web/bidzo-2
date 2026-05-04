@@ -84,7 +84,8 @@ export default function CreateListing() {
       const profile = Array.isArray(profileData) ? profileData[0] : null
       try {
         const canCreate = profile?.can_create_listings;
-        const until = profile?.restricted_until ? new Date(profile.restricted_until) : null;
+        const rawUntil = profile?.listing_restricted_until || profile?.restricted_until;
+        const until = rawUntil ? new Date(rawUntil) : null;
         const timeRestricted = !!(until && until.getTime() > Date.now());
         setIsCreateRestricted(canCreate === false || timeRestricted);
         setCreateRestrictedUntil(timeRestricted ? until : null);
