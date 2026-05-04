@@ -389,27 +389,34 @@ export default function Profile() {
     ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
     : null;
 
-  const restrictionUntilCandidates = [
-    userProfile?.restricted_until,
-    userProfile?.bid_restricted_until,
-    userProfile?.listing_restricted_until,
-  ]
-    .filter(Boolean)
-    .map((v) => {
-      try {
-        return new Date(v)
-      } catch (e) {
-        return null
-      }
-    })
-    .filter(Boolean)
+  const safeDate = (value) => {
+    if (!value) return null
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? null : d
+  }
 
+  const globalRestrictionUntil = safeDate(userProfile?.restricted_until)
+  const bidRestrictionUntil = safeDate(userProfile?.bid_restricted_until)
+  const listingRestrictionUntil = safeDate(userProfile?.listing_restricted_until)
+
+  const restrictionUntilCandidates = [globalRestrictionUntil, bidRestrictionUntil, listingRestrictionUntil].filter(Boolean)
   const restrictionUntil = restrictionUntilCandidates.length
     ? restrictionUntilCandidates.reduce((max, d) => (d.getTime() > max.getTime() ? d : max), restrictionUntilCandidates[0])
     : null
 
-  const isTimeRestricted = !!(restrictionUntil && restrictionUntil.getTime() > Date.now())
-  const isRestricted = userProfile?.can_bid === false || userProfile?.can_create_listings === false || isTimeRestricted
+  const nowMs = Date.now()
+  const isGlobalTimeRestricted = !!(globalRestrictionUntil && globalRestrictionUntil.getTime() > nowMs)
+  const isBidTimeRestricted = !!(bidRestrictionUntil && bidRestrictionUntil.getTime() > nowMs)
+  const isListingTimeRestricted = !!(listingRestrictionUntil && listingRestrictionUntil.getTime() > nowMs)
+
+  // Treat can_* = false as a "permanent" restriction only when there's no corresponding timestamp.
+  // Temporary strikes should be represented by the *_restricted_until timestamps.
+  const isPermanentlyBidRestricted = userProfile?.can_bid === false && !bidRestrictionUntil && !globalRestrictionUntil
+  const isPermanentlyListingRestricted =
+    userProfile?.can_create_listings === false && !listingRestrictionUntil && !globalRestrictionUntil
+
+  const isTimeRestricted = isGlobalTimeRestricted || isBidTimeRestricted || isListingTimeRestricted
+  const isRestricted = isTimeRestricted || isPermanentlyBidRestricted || isPermanentlyListingRestricted
 
   const refreshWallet = async () => {
     if (!user || !enableWallet) return;
