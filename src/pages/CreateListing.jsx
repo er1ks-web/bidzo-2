@@ -14,6 +14,7 @@ import PublishFeeBanner from '@/components/wallet/PublishFeeBanner';
 import TopUpModal from '@/components/wallet/TopUpModal';
 import ImageUploader from '@/components/listings/ImageUploader';
 import { cn } from '@/lib/utils';
+import { ENABLE_WALLET } from '@/lib/featureFlags';
 
 const CATEGORIES = ['electronics', 'vehicles', 'fashion', 'home', 'sports', 'collectibles', 'books', 'toys', 'garden', 'other'];
 const CONDITIONS = ['new', 'like_new', 'good', 'fair', 'poor'];
@@ -50,6 +51,8 @@ export default function CreateListing() {
     images: [],
   });
 
+  const enableWallet = ENABLE_WALLET;
+
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase.auth.getUser()
@@ -73,14 +76,17 @@ export default function CreateListing() {
       }
 
       setUser(u);
-      const ws = await getWalletState(u.id);
-      setWalletState(ws);
-      setEligibility(checkPublishEligibility(ws));
+
+      if (enableWallet) {
+        const ws = await getWalletState(u.id);
+        setWalletState(ws);
+        setEligibility(checkPublishEligibility(ws));
+      }
     })().catch(() => {});
   }, []);
 
   const refreshWallet = async () => {
-    if (!user) return;
+    if (!enableWallet || !user) return;
     const ws = await getWalletState(user.id);
     setWalletState(ws);
     setEligibility(checkPublishEligibility(ws));
@@ -117,16 +123,21 @@ export default function CreateListing() {
       return;
     }
 
-    // Re-fetch fresh wallet state before checking eligibility (avoids stale data)
-    const freshWallet = await getWalletState(user?.id);
-    const freshEligibility = checkPublishEligibility(freshWallet);
-    setWalletState(freshWallet);
-    setEligibility(freshEligibility);
+    let freshWallet = null;
+    let freshEligibility = null;
 
-    if (!freshEligibility.canPublish) {
-      toast.error('Please top up your wallet to publish.');
-      setShowTopUp(true);
-      return;
+    if (enableWallet) {
+      // Re-fetch fresh wallet state before checking eligibility (avoids stale data)
+      freshWallet = await getWalletState(user?.id);
+      freshEligibility = checkPublishEligibility(freshWallet);
+      setWalletState(freshWallet);
+      setEligibility(freshEligibility);
+
+      if (!freshEligibility.canPublish) {
+        toast.error('Please top up your wallet to publish.');
+        setShowTopUp(true);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -169,7 +180,10 @@ export default function CreateListing() {
       console.log(error)
       throw error
     }
-    await chargeListingFee(user, freshWallet, listing.id);
+
+    if (enableWallet && freshWallet) {
+      await chargeListingFee(user, freshWallet, listing.id);
+    }
     toast.success('Listing published!');
     window.location.href = '/profile';
     } catch (err) {
@@ -329,7 +343,7 @@ export default function CreateListing() {
         </div>
 
         {/* Publish fee banner */}
-        {walletState && eligibility && (
+        {enableWallet && walletState && eligibility && (
           <PublishFeeBanner
             eligibility={eligibility}
             walletState={walletState}
@@ -382,7 +396,7 @@ export default function CreateListing() {
         </Button>
       </div>
 
-      {user && walletState && (
+      {enableWallet && user && walletState && (
         <TopUpModal
           open={showTopUp}
           onClose={() => setShowTopUp(false)}
