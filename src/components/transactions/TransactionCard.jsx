@@ -9,6 +9,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/supabase'
 import ReviewForm from '@/components/reviews/ReviewForm';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -64,6 +71,10 @@ export default function TransactionCard({
   const otherPartyName = isBuyer ? transaction.seller_name : transaction.buyer_name;
   const convId = transaction.conversation_id || [transaction.buyer_email, transaction.seller_email].sort().join('_');
   const roleOfReviewer = isBuyer ? 'buyer' : 'seller';
+
+  const txCreatedRaw = transaction?.created_date || transaction?.created_at || null
+  const txCreatedAt = txCreatedRaw ? new Date(txCreatedRaw) : null
+  const inactiveAllowed = !!(txCreatedAt && Number.isFinite(txCreatedAt.getTime()) && (Date.now() - txCreatedAt.getTime()) >= 48 * 60 * 60 * 1000)
 
   const queryClient = useQueryClient();
 
@@ -244,52 +255,19 @@ export default function TransactionCard({
 
               <div className="space-y-2">
                 <p className="text-sm font-medium">Reason</p>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`seller-cancel-reason-${transaction.id}`}
-                      value="changed_mind"
-                      checked={sellerCancelReason === 'changed_mind'}
-                      onChange={(e) => setSellerCancelReason(e.target.value)}
-                      className="cursor-pointer"
-                    />
-                    I changed my mind
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`seller-cancel-reason-${transaction.id}`}
-                      value="buyer_inactive"
-                      checked={sellerCancelReason === 'buyer_inactive'}
-                      onChange={(e) => setSellerCancelReason(e.target.value)}
-                      className="cursor-pointer"
-                    />
-                    Buyer is inactive / not responding
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`seller-cancel-reason-${transaction.id}`}
-                      value="shipping_problem"
-                      checked={sellerCancelReason === 'shipping_problem'}
-                      onChange={(e) => setSellerCancelReason(e.target.value)}
-                      className="cursor-pointer"
-                    />
-                    Shipping / meetup problem
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`seller-cancel-reason-${transaction.id}`}
-                      value="other"
-                      checked={sellerCancelReason === 'other'}
-                      onChange={(e) => setSellerCancelReason(e.target.value)}
-                      className="cursor-pointer"
-                    />
-                    Other
-                  </label>
-                </div>
+                <Select value={sellerCancelReason} onValueChange={setSellerCancelReason}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a reason" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="changed_mind">I changed my mind</SelectItem>
+                    <SelectItem value="buyer_inactive" disabled={!inactiveAllowed}>
+                      Buyer is inactive / not responding{inactiveAllowed ? '' : ' (available after 48h)'}
+                    </SelectItem>
+                    <SelectItem value="shipping_problem">Shipping / meetup problem</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-start gap-3">
@@ -354,52 +332,19 @@ export default function TransactionCard({
 
               <div className="space-y-2">
                 <p className="text-sm font-medium">Reason</p>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`buyer-cancel-reason-${transaction.id}`}
-                      value="changed_mind"
-                      checked={buyerCancelReason === 'changed_mind'}
-                      onChange={(e) => setBuyerCancelReason(e.target.value)}
-                      className="cursor-pointer"
-                    />
-                    I changed my mind
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`buyer-cancel-reason-${transaction.id}`}
-                      value="seller_inactive"
-                      checked={buyerCancelReason === 'seller_inactive'}
-                      onChange={(e) => setBuyerCancelReason(e.target.value)}
-                      className="cursor-pointer"
-                    />
-                    Seller is inactive / not responding
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`buyer-cancel-reason-${transaction.id}`}
-                      value="shipping_problem"
-                      checked={buyerCancelReason === 'shipping_problem'}
-                      onChange={(e) => setBuyerCancelReason(e.target.value)}
-                      className="cursor-pointer"
-                    />
-                    Shipping / meetup problem
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`buyer-cancel-reason-${transaction.id}`}
-                      value="other"
-                      checked={buyerCancelReason === 'other'}
-                      onChange={(e) => setBuyerCancelReason(e.target.value)}
-                      className="cursor-pointer"
-                    />
-                    Other
-                  </label>
-                </div>
+                <Select value={buyerCancelReason} onValueChange={setBuyerCancelReason}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a reason" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="changed_mind">I changed my mind</SelectItem>
+                    <SelectItem value="seller_inactive" disabled={!inactiveAllowed}>
+                      Seller is inactive / not responding{inactiveAllowed ? '' : ' (available after 48h)'}
+                    </SelectItem>
+                    <SelectItem value="shipping_problem">Shipping / meetup problem</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-start gap-3">
