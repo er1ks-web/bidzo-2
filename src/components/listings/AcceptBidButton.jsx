@@ -23,6 +23,9 @@ export default function AcceptBidButton({ listing, onAccepted }) {
   const isUuid = (v) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ''));
 
   const handleAccept = async () => {
+    toast.error('Accept Bid is temporarily disabled while security upgrades are applied.');
+    return;
+
     setLoading(true);
     try {
       // End the auction immediately and mark as sold_pending

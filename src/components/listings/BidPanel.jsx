@@ -129,19 +129,20 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
       })
 
       if (rpcError) {
-        console.log(rpcError)
-        setValidationError(rpcError.message || 'Failed to place bid')
-        setIsSubmitting(false)
-        return
+        console.log(rpcError);
+        toast.error(rpcError.message || 'Failed to place bid. Please try again.');
+        if (rpcError?.code) setValidationError(`${rpcError.code}: ${rpcError.message || 'Failed to place bid'}`);
+        setIsSubmitting(false);
+        return;
       }
 
-      toast.success('Bid placed successfully!');
       setBidAmount('');
       setIsSubmitting(false);
       setShowSuccessSheet(true);
       onBidPlaced?.();
     } catch (err) {
-      console.log(err)
+      console.log(err);
+      toast.error('Failed to place bid. Please try again.');
       const errorMsg = err.response?.data?.error || err.message || 'Failed to place bid';
       setValidationError(errorMsg);
       setIsSubmitting(false);

@@ -34,8 +34,8 @@ export default function Home() {
     if (sellerIds.length === 0) return rows
 
     const { data: profilesData, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id,username,email')
+      .from('public_profiles')
+      .select('id,username')
       .in('id', sellerIds)
 
     if (profilesError) {

@@ -111,8 +111,8 @@ export default function ListingDetail() {
         if (!bidderIds.length) return rows
 
         const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, username, email')
+          .from('public_profiles')
+          .select('id, username')
           .in('id', bidderIds)
 
         if (profilesError) console.log(profilesError)
@@ -120,7 +120,7 @@ export default function ListingDetail() {
         const byId = new Map((Array.isArray(profiles) ? profiles : []).map(p => [p.id, p]))
         return rows.map((b) => {
           const p = byId.get(b.bidder_id)
-          const display = p?.username || (p?.email ? p.email.split('@')[0] : null)
+          const display = p?.username || null
           return {
             ...b,
             bidder_name: display || b.bidder_name,
@@ -243,7 +243,7 @@ export default function ListingDetail() {
     queryKey: ['seller-profile', listing?.seller_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('*')
         .eq('id', listing.seller_id)
 
@@ -253,8 +253,7 @@ export default function ListingDetail() {
     enabled: !!listing?.seller_id,
   });
 
-  const sellerEmail = sellerProfile?.email || null
-  const sellerName = listing?.seller_name || sellerProfile?.username || (sellerEmail ? sellerEmail.split('@')[0] : null)
+  const sellerName = listing?.seller_name || sellerProfile?.username || null
   const { data: sellerRating } = useUserRating(listing?.seller_id || sellerProfile?.id || null);
   const hasEnded = isAuction && listing?.auction_end && new Date(listing.auction_end) < new Date();
   const isSoldPending = ['sold_pending', 'in_progress', 'completed'].includes(listing?.status);
@@ -267,8 +266,6 @@ export default function ListingDetail() {
   const isEndedOrInDeal = !!(hasEnded || isSoldPending)
   const isWinner = !!(
     user?.id && highestBidderFallback && user.id === highestBidderFallback
-  ) || !!(
-    user?.email && highestBidderFallback && user.email === highestBidderFallback
   )
 
   const handleContact = () => {
@@ -276,12 +273,12 @@ export default function ListingDetail() {
       requireLogin('Log in to message the seller');
       return;
     }
-    if (!sellerEmail) {
-      toast.error('Seller email not available');
+    if (!listing?.seller_id) {
+      toast.error('Seller not available');
       return
     }
-    const convId = [user.email, sellerEmail].sort().join('_');
-    window.location.href = `/messages?conv=${convId}&listing=${listing.id}&to=${sellerEmail}&toName=${sellerName || ''}`;
+    const convId = [user.id, listing.seller_id].sort().join('_');
+    window.location.href = `/messages?conv=${convId}&listing=${listing.id}&toId=${listing.seller_id}&toName=${sellerName || ''}`;
   };
 
   const handleBuyNow = async () => {
@@ -291,162 +288,23 @@ export default function ListingDetail() {
     }
 
     try {
-      const now = new Date().toISOString()
+      console.log('[BuyNowFixed] invoking rpc buy_now', { listingId: listing?.id })
+      const { data: txId, error: rpcError } = await supabase.rpc('buy_now', {
+        p_listing_id: listing.id,
+      })
 
-      console.log('[BuyNowFixed] start', { listingId: listing?.id, now })
+      console.log('[BuyNowFixed] rpc buy_now result', { txId, rpcError })
 
-      const buyerId = user?.id
-      const sellerId = listing?.seller_id
-
-      console.log('[BuyNowFixed] ids', { buyerId, sellerId })
-
-      if (!buyerId || !sellerId) {
-        toast.error('Missing buyer or seller info')
-        return
-      }
-
-      // Prevent double purchases: verify latest listing state
-      const { data: listingRows, error: listingReadError } = await supabase
-        .from('listings')
-        .select('id, status, is_sold, auction_end')
-        .eq('id', listing.id)
-        .limit(1)
-
-      if (listingReadError) console.log(listingReadError)
-      const latest = Array.isArray(listingRows) ? (listingRows[0] || null) : null
-      const latestHasEnded = !!(latest?.auction_end && new Date(latest.auction_end) < new Date())
-      const latestUnavailable = !latest || latest?.is_sold || latest?.status !== 'active' || latestHasEnded
-
-      console.log('[BuyNowFixed] latest listing state', { latest, latestHasEnded, latestUnavailable })
-      if (latestUnavailable) {
-        toast.error('This listing is no longer available.')
-
-        queryClient.invalidateQueries({ queryKey: ['listing', listingId] })
-        queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
-        return
-      }
-
-      // If a transaction already exists for this listing, don't create another
-      const { data: existingTx, error: existingTxError } = await supabase
-        .from('auction_transactions')
-        .select('id')
-        .eq('listing_id', listing.id)
-        .limit(1)
-
-      if (existingTxError) console.log(existingTxError)
-      if (Array.isArray(existingTx) && existingTx[0]) {
-        console.log('[BuyNowFixed] existingTx found', existingTx[0])
-        toast.error('This listing has already been purchased.')
-
-        queryClient.invalidateQueries({ queryKey: ['listing', listingId] })
-        queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
-        return
-      }
-
-      const { data: sellerProfiles, error: sellerErr } = await supabase
-        .from('profiles')
-        .select('id, email, username, full_name')
-        .eq('id', sellerId)
-        .limit(1)
-
-      if (sellerErr) console.log(sellerErr)
-      const sellerProfile = Array.isArray(sellerProfiles) ? (sellerProfiles[0] || null) : null
-      const sellerEmail = listing?.seller_email || sellerProfile?.email || null
-      const sellerName = listing?.seller_name || sellerProfile?.username || sellerProfile?.full_name || (sellerEmail ? sellerEmail.split('@')[0] : null)
-
-      // 1) Mark listing as sold_pending (awaiting confirmations)
-      const { data: updatedListings, error: listingErr } = await supabase
-        .from('listings')
-        .update({
-          status: 'sold_pending',
-          is_sold: false,
-          highest_bidder: user.email,
-          highest_bidder_name: user.full_name,
-          current_bid: listing.price,
-          auction_end: now,
-        })
-        .eq('id', listing.id)
-        .eq('status', 'active')
-        .select('id, status')
-
-      console.log('[BuyNowFixed] listing update result', { updatedListings, listingErr })
-
-      if (listingErr) {
-        console.log(listingErr)
-        toast.error('Could not complete purchase. Please try again.')
-        return
-      }
-
-      if (!Array.isArray(updatedListings) || updatedListings.length === 0) {
-        toast.error('This listing is no longer available.')
-        return
-      }
-
-      // 2) Create deal record so it shows up in Deals/Transactions
-      let txErr = null
-      {
-        console.log('[BuyNowFixed] inserting auction_transactions (with title/image)')
-        const { error } = await supabase
-          .from('auction_transactions')
-          .insert({
-            listing_id: listing.id,
-            listing_title: listing.title,
-            listing_image: listing.images?.[0] || null,
-            seller_id: sellerId,
-            buyer_id: buyerId,
-            winning_amount: listing.price,
-            status: 'sold_pending',
-            buyer_confirmed: false,
-            seller_confirmed: false,
-          })
-        txErr = error
-      }
-
-      console.log('[BuyNowFixed] tx insert (with title/image) result', { txErr })
-
-      // If denormalized columns don't exist, retry with core columns only
-      if (txErr && txErr.code === 'PGRST204') {
-        console.log(txErr)
-        console.log('[BuyNowFixed] retry inserting auction_transactions (core columns only)')
-        const { error } = await supabase
-          .from('auction_transactions')
-          .insert({
-            listing_id: listing.id,
-            seller_id: sellerId,
-            buyer_id: buyerId,
-            winning_amount: listing.price,
-            status: 'sold_pending',
-            buyer_confirmed: false,
-            seller_confirmed: false,
-          })
-        txErr = error
-      }
-
-      console.log('[BuyNowFixed] tx insert final result', { txErr })
-
-      if (txErr) {
-        console.log(txErr)
-        toast.error('Purchase created, but deal record failed. Please contact support.')
+      if (rpcError) {
+        toast.error(rpcError.message || 'Could not complete purchase. Please try again.')
         return
       }
 
       toast.success('Purchase confirmed! Check your Transaction Room.')
-      queryClient.setQueryData(['listing', listingId], (prev) => {
-        if (!prev || typeof prev !== 'object') return prev
-        return {
-          ...prev,
-          status: 'sold_pending',
-          is_sold: false,
-          highest_bidder: user.email,
-          highest_bidder_name: user.full_name,
-          current_bid: listing.price,
-          auction_end: now,
-        }
-      })
       queryClient.invalidateQueries({ queryKey: ['listing', listingId] })
       queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
-
-      console.log('[BuyNowFixed] success')
+      queryClient.invalidateQueries({ queryKey: ['tx-buyer'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['tx-seller'], exact: false })
     } catch (e) {
       console.log(e)
       toast.error('Something went wrong. Please try again.')
@@ -730,7 +588,7 @@ export default function ListingDetail() {
               </div>
               <div>
                 <p className="font-semibold group-hover:text-accent transition-colors">
-                  {sellerProfile?.username || listing.seller_name || (sellerEmail ? sellerEmail.split('@')[0] : 'User')}
+                  {sellerProfile?.username || listing.seller_name || 'User'}
                 </p>
                 {sellerRating?.avg ? (
                   <StarRatingDisplay rating={sellerRating.avg} count={sellerRating.count} size="sm" />
@@ -758,7 +616,7 @@ export default function ListingDetail() {
             <ReportModal
               listing={listing}
               sellerName={sellerName}
-              sellerEmail={sellerEmail}
+              sellerEmail={null}
               triggerClassName="flex-1 border-destructive text-destructive"
               triggerSize="sm"
             />

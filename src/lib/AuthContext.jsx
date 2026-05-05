@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/supabase'
-import { appParams } from '@/lib/app-params';
 
 const AuthContext = createContext(null);
 
@@ -29,41 +28,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAppState = async () => {
-    try {
-      setIsLoadingPublicSettings(true);
-      setAuthError(null);
-      
-      try {
-        const headers = {
-          'X-App-Id': appParams.appId,
-        };
-
-        if (appParams.token) {
-          headers['Authorization'] = `Bearer ${appParams.token}`;
-        }
-
-        const res = await fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, { headers });
-
-        if (!res.ok) {
-          throw new Error(`Public settings fetch failed: ${res.status}`);
-        }
-
-        const publicSettings = await res.json();
-        setAppPublicSettings(publicSettings);
-
-        await checkUserAuth();
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        console.error('App state check failed:', appError);
-        // Allow public access even if app check fails — don't block browsing
-        setIsLoadingPublicSettings(false);
-        await checkUserAuth();
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setIsLoadingPublicSettings(false);
-      await checkUserAuth();
-    }
+    setIsLoadingPublicSettings(true);
+    setAuthError(null);
+    setAppPublicSettings(null);
+    await checkUserAuth();
+    setIsLoadingPublicSettings(false);
   };
 
   const checkUserAuth = async () => {

@@ -12,7 +12,6 @@ import AuctionTimer from '@/components/listings/AuctionTimer';
 import WalletCard from '@/components/wallet/WalletCard';
 import TopUpModal from '@/components/wallet/TopUpModal';
 import EditProfileCard from '@/components/profile/EditProfileCard';
-import NotificationPrefsCard from '@/components/profile/NotificationPrefsCard';
 import { format } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ENABLE_WALLET } from '@/lib/featureFlags';
@@ -336,8 +335,8 @@ export default function Profile() {
       const reviewerIds = [...new Set(rows.map(r => r.reviewer_id).filter(Boolean))]
       const { data: reviewerProfiles, error: reviewerErr } = reviewerIds.length
         ? await supabase
-          .from('profiles')
-          .select('id, email, username')
+          .from('public_profiles')
+          .select('id, username')
           .in('id', reviewerIds)
         : { data: [], error: null }
 
@@ -358,7 +357,7 @@ export default function Profile() {
 
         return {
           ...r,
-          reviewer_name: p?.username || (p?.email ? p.email.split('@')[0] : null),
+          reviewer_name: p?.username || null,
           images: parsedImages,
           created_date: r.created_date || r.created_at,
         }
@@ -718,7 +717,6 @@ export default function Profile() {
                   lang={lang}
                   onProfileSaved={handleProfileSaved}
                 />
-                <NotificationPrefsCard user={user} />
               </TabsContent>
 
               <TabsContent value="reviews" className="mt-6">
@@ -895,7 +893,6 @@ export default function Profile() {
               lang={lang}
               onProfileSaved={handleProfileSaved}
             />
-            <NotificationPrefsCard user={user} />
           </TabsContent>
 
           <TabsContent value="reviews" className="mt-6">

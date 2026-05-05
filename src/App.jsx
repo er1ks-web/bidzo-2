@@ -10,7 +10,6 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import AppLayout from '@/components/layout/AppLayout';
-import AdminGuard from '@/components/layout/AdminGuard';
 import Home from '@/pages/Home';
 import Browse from '@/pages/Browse';
 import ListingDetail from '@/pages/ListingDetail';
@@ -18,7 +17,6 @@ import CreateListing from '@/pages/CreateListing';
 import Messages from '@/pages/Messages';
 import Profile from '@/pages/Profile.jsx';
 import Login from '@/pages/Login';
-import Admin from '@/pages/Admin';
 import EndingSoon from '@/pages/EndingSoon';
 import Favourites from '@/pages/Favourites';
 import PublicProfile from '@/pages/PublicProfile';
@@ -71,7 +69,6 @@ const AuthenticatedApp = () => {
         <Route path="/create" element={<ProtectedRoute><CreateListing /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute><AdminGuard><Admin /></AdminGuard></ProtectedRoute>} />
         <Route path="/favourites" element={<ProtectedRoute><Favourites /></ProtectedRoute>} />
         <Route path="/deals" element={<ProtectedRoute><Deals /></ProtectedRoute>} />
       </Route>

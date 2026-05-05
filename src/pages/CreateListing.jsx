@@ -190,8 +190,6 @@ export default function CreateListing() {
       images: form.images,
       seller_id: user?.id,
       status: 'active',
-      views: 0,
-      bid_count: 0,
       published: true,
       is_sold: false,
       brand: form.brand || null,
@@ -213,6 +211,9 @@ export default function CreateListing() {
       if (form.buy_now_price) {
         data.buy_now_price = parseFloat(form.buy_now_price);
       }
+    } else {
+      // Use buy_now RPC for fixed-price purchases by ensuring buy_now_price is present
+      data.buy_now_price = parseFloat(form.price);
     }
 
     const { data: listing, error } = await supabase

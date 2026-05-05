@@ -40,7 +40,7 @@ export default function Messages() {
   const [activeConv, setActiveConv] = useState(params.get('conv') || null);
   const [newMessage, setNewMessage] = useState('');
   const [recipientEmail, setRecipientEmail] = useState(params.get('to') || '');
-  const [recipientId, setRecipientId] = useState(null);
+  const [recipientId, setRecipientId] = useState(params.get('toId') || null);
   const [recipientName, setRecipientName] = useState(params.get('toName') || '');
   const [sending, setSending] = useState(false);
   const [imageFile, setImageFile] = useState(null);
@@ -79,35 +79,22 @@ export default function Messages() {
       userRef.current = u
       setUser(u)
 
-      // Resolve initial recipient id (when navigating from listing)
-      if (params.get('to')) {
-        try {
-          const { data: recRows, error: recErr } = await supabase
-            .from('profiles')
-            .select('id, email, username, profile_picture_url')
-            .eq('email', params.get('to'))
-            .limit(1)
+      // Resolve initial recipient id (supports both ?toId=<uuid> and legacy ?to=<email>)
+      const toIdParam = params.get('toId')
+      const toEmailParam = params.get('to')
 
-          if (recErr) console.log(recErr)
-          const row = Array.isArray(recRows) ? (recRows[0] || null) : null
-          if (row?.id) {
-            setRecipientId(row.id)
-            setProfileMap(prev => ({
-              ...prev,
-              [row.id]: { email: row.email, username: row.username, avatar: row.profile_picture_url },
-            }))
+      if (toIdParam && isUuid(toIdParam)) {
+        setRecipientId(toIdParam)
 
-            // If we didn't get an id-based conversation id in URL, derive it now
-            const urlConv = params.get('conv')
-            const looksIdBased = typeof urlConv === 'string' && urlConv.includes('_') && urlConv.split('_').every(isUuid)
-            if (!looksIdBased) {
-              const derived = [u.id, row.id].sort().join('_')
-              setActiveConv(derived)
-            }
-          }
-        } catch (e) {
-          console.log(e)
+        const urlConv = params.get('conv')
+        const looksIdBased = typeof urlConv === 'string' && urlConv.includes('_') && urlConv.split('_').every(isUuid)
+        if (!looksIdBased) {
+          const derived = [u.id, toIdParam].sort().join('_')
+          setActiveConv(derived)
         }
+      } else if (toEmailParam) {
+        // Legacy path: email-based recipient lookup is intentionally disabled.
+        // Use ?toId=<uuid> so the database doesn't need to expose emails publicly.
       }
 
       try {
@@ -147,8 +134,8 @@ export default function Messages() {
     const ids = Array.isArray(userIds) ? userIds.filter(Boolean) : []
     if (!ids.length) return;
     const { data, error } = await supabase
-      .from('profiles')
-      .select('id, email, username, profile_picture_url')
+      .from('public_profiles')
+      .select('id, username, profile_picture_url')
       .in('id', ids)
 
     if (error) {
@@ -160,7 +147,7 @@ export default function Messages() {
     const map = {}
     rows.forEach((p) => {
       if (!p?.id) return
-      map[p.id] = { email: p.email, username: p.username, avatar: p.profile_picture_url }
+      map[p.id] = { email: null, username: p.username, avatar: p.profile_picture_url }
     })
     setProfileMap(prev => ({ ...prev, ...map }));
   };
@@ -326,31 +313,9 @@ export default function Messages() {
     const content = newMessage.trim();
 
     let recipientUserId = recipientId
-    if (recipient && !recipientUserId) {
-      try {
-        const { data: recRows, error: recErr } = await supabase
-          .from('profiles')
-          .select('id, email, username, profile_picture_url')
-          .eq('email', recipient)
-          .limit(1)
-
-        if (recErr) console.log(recErr)
-        const row = Array.isArray(recRows) ? (recRows[0] || null) : null
-        if (row?.id) {
-          recipientUserId = row.id
-          setRecipientId(row.id)
-          setProfileMap(prev => ({
-            ...prev,
-            [row.id]: { email: row.email, username: row.username, avatar: row.profile_picture_url },
-          }))
-        }
-      } catch (e) {
-        console.log(e)
-      }
-    }
 
     if (!recipientUserId) {
-      toast.error('Recipient not found')
+      toast.error('Recipient not found. Please open chat using a profile link or listing Contact Seller button.')
       setSending(false)
       return
     }

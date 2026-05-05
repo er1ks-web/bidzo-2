@@ -40,8 +40,8 @@ export default function PublicProfile() {
     const reviewerIds = [...new Set(rows.map(r => r.reviewer_id).filter(Boolean))]
     const { data: reviewerProfiles, error: reviewerErr } = reviewerIds.length
       ? await supabase
-        .from('profiles')
-        .select('id, email, username')
+        .from('public_profiles')
+        .select('id, username')
         .in('id', reviewerIds)
       : { data: [], error: null }
 
@@ -62,7 +62,7 @@ export default function PublicProfile() {
 
       return {
         ...r,
-        reviewer_name: p?.username || (p?.email ? p.email.split('@')[0] : null),
+        reviewer_name: p?.username || null,
         images: parsedImages,
         created_date: r.created_date || r.created_at,
       }
@@ -73,12 +73,21 @@ export default function PublicProfile() {
     if (!sellerId) return;
     async function load() {
       try {
-        const q = supabase.from('profiles').select('*').limit(1)
-        const { data: profileData, error: profileError } = isUuid ? await q.eq('id', sellerId) : await q.eq('email', sellerId)
+        if (!isUuid) {
+          setProfile(null)
+          setListings([])
+          setSoldListings([])
+          setReviews([])
+          setSellerUserId(null)
+          return
+        }
+
+        const q = supabase.from('public_profiles').select('*').limit(1)
+        const { data: profileData, error: profileError } = await q.eq('id', sellerId)
         if (profileError) console.log(profileError)
         const profileRes = Array.isArray(profileData) ? (profileData[0] || null) : null
 
-        const sellerUserId = isUuid ? sellerId : (profileRes?.id || null)
+        const sellerUserId = sellerId
 
         const [allListingsRes, reviewsRes] = await Promise.all([
           (async () => {
@@ -166,11 +175,8 @@ export default function PublicProfile() {
 
   const displayName =
     profile?.username ||
-    (profile?.email ? profile.email.split('@')[0] : null) ||
-    (typeof sellerId === 'string' && sellerId.includes('@') ? sellerId.split('@')[0] : 'User');
-  const memberSince = (profile?.created_at || profile?.created_date)
-    ? format(new Date(profile.created_at || profile.created_date), 'MMMM yyyy')
-    : null;
+    'User';
+  const memberSince = null;
   const avgRating = reviews.length
     ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
     : null;

@@ -38,7 +38,7 @@ const STATUS_CONFIG = {
 
 export default function TransactionCard({
   transaction,
-  currentUserEmail,
+  currentUserId,
   onConfirm,
   onRejectSale,
   onComplete,
@@ -52,24 +52,22 @@ export default function TransactionCard({
   const [buyerCancelAck, setBuyerCancelAck] = useState(false)
   const [buyerCancelReason, setBuyerCancelReason] = useState('')
 
-  const isBuyer = currentUserEmail === transaction.buyer_email;
-  const isSeller = currentUserEmail === transaction.seller_email;
+  const isBuyer = !!(currentUserId && transaction?.buyer_id && currentUserId === transaction.buyer_id);
+  const isSeller = !!(currentUserId && transaction?.seller_id && currentUserId === transaction.seller_id);
   const cfg = STATUS_CONFIG[transaction.status] || STATUS_CONFIG.sold_pending;
   const StatusIcon = cfg.icon;
   const isCompleted = transaction.status === 'completed';
   const isCancelled = transaction.status === 'cancelled';
 
-  const currentUserId = isBuyer ? transaction.buyer_id : transaction.seller_id;
-  const otherPartyId = isBuyer ? transaction.seller_id : transaction.buyer_id;
+  const otherPartyId = isBuyer ? transaction?.seller_id : transaction?.buyer_id;
 
   const bothConfirmed = transaction.buyer_confirmed && transaction.seller_confirmed;
   const canBuyerConfirm = isBuyer && !transaction.buyer_confirmed && !isCompleted && transaction.status !== 'cancelled';
   const canSellerConfirm = isSeller && !transaction.seller_confirmed && !isCompleted && transaction.status !== 'cancelled';
   const canMarkShipped = isSeller && bothConfirmed && !transaction.shipped && !isCompleted && transaction.status !== 'cancelled';
   const canMarkReceived = isBuyer && bothConfirmed && transaction.shipped && !isCompleted && transaction.status !== 'cancelled';
-  const otherPartyEmail = isBuyer ? transaction.seller_email : transaction.buyer_email;
-  const otherPartyName = isBuyer ? transaction.seller_name : transaction.buyer_name;
-  const convId = transaction.conversation_id || [transaction.buyer_email, transaction.seller_email].sort().join('_');
+  const otherPartyName = isBuyer ? transaction?.seller_name : transaction?.buyer_name;
+  const convId = transaction.conversation_id || (transaction.buyer_id && transaction.seller_id ? [transaction.buyer_id, transaction.seller_id].sort().join('_') : null);
   const roleOfReviewer = isBuyer ? 'buyer' : 'seller';
 
   const txCreatedRaw = transaction?.created_date || transaction?.created_at || null
@@ -152,7 +150,7 @@ export default function TransactionCard({
             <p>
               {isBuyer ? 'Seller: ' : 'Buyer: '}
               <Link
-                to={`/seller/${encodeURIComponent(isBuyer ? transaction.seller_email : transaction.buyer_email)}`}
+                to={`/seller/${encodeURIComponent(isBuyer ? transaction.seller_id : transaction.buyer_id)}`}
                 className="text-accent hover:underline font-medium"
               >
                 {isBuyer ? transaction.seller_name : transaction.buyer_name}
@@ -195,7 +193,7 @@ export default function TransactionCard({
       {/* Actions */}
       <div className="border-t px-4 py-3 flex flex-wrap gap-2">
         <Link
-          to={`/messages?conv=${convId}&to=${otherPartyEmail}&toName=${encodeURIComponent(otherPartyName)}`}
+          to={`/messages?conv=${encodeURIComponent(convId || '')}&toId=${encodeURIComponent(otherPartyId || '')}&toName=${encodeURIComponent(otherPartyName || '')}`}
           className="flex-1"
         >
           <Button variant="outline" size="sm" className="w-full gap-2">
@@ -411,9 +409,9 @@ export default function TransactionCard({
           </div>
           <ReviewForm
             transaction={transaction}
-            currentUser={{ id: currentUserId, email: currentUserEmail, full_name: isBuyer ? transaction.buyer_name : transaction.seller_name }}
+            currentUser={{ id: currentUserId, email: null, full_name: isBuyer ? transaction.buyer_name : transaction.seller_name }}
             targetId={otherPartyId}
-            targetEmail={otherPartyEmail}
+            targetEmail={''}
             targetName={otherPartyName}
             roleOfReviewer={roleOfReviewer}
             existingReview={existingReview}

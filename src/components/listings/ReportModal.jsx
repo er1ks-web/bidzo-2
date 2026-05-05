@@ -4,6 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/supabase';
 import { toast } from 'sonner';
+import ReportSuccessSheet from '@/components/listings/ReportSuccessSheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +29,7 @@ export default function ReportModal({
   const [reportDetails, setReportDetails] = useState('');
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showSuccessSheet, setShowSuccessSheet] = useState(false);
 
   const handleReport = async () => {
     console.log('[ReportModal] Submit clicked', {
@@ -107,7 +109,7 @@ export default function ReportModal({
       }
 
       console.log('[ReportModal] showing success toast and closing modal');
-      toast.success('Thanks for helping keep Bidzo safe — your report was submitted.');
+      setShowSuccessSheet(true);
       setOpen(false);
       setReportDetails('');
     } catch (err) {
@@ -120,57 +122,61 @@ export default function ReportModal({
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        <Button 
-          variant="outline" 
-          size={triggerSize} 
-          className={`gap-1 text-destructive ${triggerClassName}`}
-        >
-          <Flag className="w-4 h-4" />
-          Report
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent className="max-w-md">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Report this listing</AlertDialogTitle>
-          <AlertDialogDescription>
-            Report "{listing.title}" by {sellerNameOverride || listing.seller_name || 'Seller'}.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        
-        <div className="space-y-3 py-4">
-          <div className="text-xs space-y-1 bg-muted/50 p-2 rounded">
-            <p><strong>Listing:</strong> {listing.title}</p>
-            <p><strong>Seller:</strong> {(sellerNameOverride || listing.seller_name || 'Seller')} ({sellerEmailOverride || listing.seller_email || '—'})</p>
-            <p><strong>ID:</strong> {listing.id}</p>
-          </div>
-          
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">
-              Additional details (optional)
-            </label>
-            <Textarea
-              placeholder="Describe why you're reporting this listing..."
-              value={reportDetails}
-              onChange={(e) => setReportDetails(e.target.value)}
-              className="mt-1.5 text-sm"
-              rows={4}
-            />
-          </div>
-        </div>
-
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={handleReport}
-            disabled={submitting}
-            className="bg-destructive hover:bg-destructive/90"
+    <>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogTrigger asChild>
+          <Button 
+            variant="outline" 
+            size={triggerSize} 
+            className={`gap-1 text-destructive ${triggerClassName}`}
           >
-            Submit Report
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+            <Flag className="w-4 h-4" />
+            Report
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Report this listing</AlertDialogTitle>
+            <AlertDialogDescription>
+              Report "{listing.title}" by {sellerNameOverride || listing.seller_name || 'Seller'}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-3 py-4">
+            <div className="text-xs space-y-1 bg-muted/50 p-2 rounded">
+              <p><strong>Listing:</strong> {listing.title}</p>
+              <p><strong>Seller:</strong> {(sellerNameOverride || listing.seller_name || 'Seller')} ({sellerEmailOverride || listing.seller_email || '—'})</p>
+              <p><strong>ID:</strong> {listing.id}</p>
+            </div>
+            
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">
+                Additional details (optional)
+              </label>
+              <Textarea
+                placeholder="Describe why you're reporting this listing..."
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+                className="mt-1.5 text-sm"
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleReport}
+              disabled={submitting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Submit Report
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <ReportSuccessSheet isOpen={showSuccessSheet} onClose={() => setShowSuccessSheet(false)} />
+    </>
   );
 }

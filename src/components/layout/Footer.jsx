@@ -1,8 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
-import { Mail, Instagram, ShieldCheck } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { Mail, Instagram } from 'lucide-react';
 
 const footerTranslations = {
   lv: {
@@ -47,11 +45,6 @@ export default function Footer() {
   const { lang } = useI18n();
   const f = footerTranslations[lang] || footerTranslations.lv;
   const year = new Date().getFullYear();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    base44.auth.me().then((u) => setIsAdmin(u?.role === 'admin')).catch(() => {});
-  }, []);
 
   return (
     <footer className="bg-[#0d0d0d] text-white/80 border-t border-white/10 mt-16">
@@ -131,12 +124,6 @@ export default function Footer() {
           <div className="flex items-center gap-4">
             <Link to="/terms" className="hover:text-white/60 transition-colors">{f.terms}</Link>
             <Link to="/privacy" className="cursor-pointer pointer-events-auto hover:text-white/60 transition-colors">{f.privacy}</Link>
-            {isAdmin && (
-              <Link to="/admin" className="flex items-center gap-1.5 hover:text-yellow-400 transition-colors">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                {lang === 'lv' ? 'Administrācija' : 'Admin'}
-              </Link>
-            )}
           </div>
         </div>
       </div>

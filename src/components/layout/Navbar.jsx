@@ -23,7 +23,7 @@ export default function Navbar() {
   const wasWinningByListingIdRef = useRef(new Map())
 
   const logoUrl = 'https://xnadmnketxbquyrgqmcs.supabase.co/storage/v1/object/public/site-assets/bidzo-web-logo-new.png'
-  const fallbackLogoUrl = 'https://media.base44.com/images/public/69c6629c38b4f05a07d13e7c/236f5728d_ChatGPT_Image_Mar_28__2026__06_25_47_PM-removebg-preview.png'
+  const fallbackLogoUrl = logoUrl
 
   const navLinks = [
     { to: '/', label: t('nav.home'), icon: Gavel },

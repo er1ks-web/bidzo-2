@@ -85,7 +85,7 @@ export default function Transactions() {
 
     const userIds = [...new Set(rows.flatMap(r => [r.buyer_id, r.seller_id]).filter(Boolean))]
     const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('*')
       .in('id', userIds)
 
@@ -112,10 +112,8 @@ export default function Transactions() {
         ...tx,
         listing_title: listing?.title || tx.listing_title || null,
         listing_image: (Array.isArray(listing?.images) ? listing.images[0] : null) || tx.listing_image || '',
-        buyer_email: buyer?.email || null,
-        seller_email: seller?.email || null,
-        buyer_name: buyer?.username || buyer?.full_name || (buyer?.email ? buyer.email.split('@')[0] : null),
-        seller_name: seller?.username || seller?.full_name || (seller?.email ? seller.email.split('@')[0] : null),
+        buyer_name: buyer?.username || null,
+        seller_name: seller?.username || null,
         created_date: tx.created_at || tx.created_date,
         updated_date: tx.updated_at || tx.updated_date,
       }
@@ -280,7 +278,7 @@ export default function Transactions() {
 
   const handleConfirm = async (tx) => {
     setConfirmLoading(tx.id);
-    const isBuyer = user.email === tx.buyer_email;
+    const isBuyer = user.id === tx.buyer_id;
     const updates = isBuyer
       ? { buyer_confirmed: true, buyer_confirmed_at: new Date().toISOString() }
       : { seller_confirmed: true, seller_confirmed_at: new Date().toISOString() };
@@ -300,18 +298,8 @@ export default function Transactions() {
 
     if (error) console.log(error)
 
-    if (bothConfirmed) {
-       toast.success(t('deals.bothConfirmed'));
-       // Update the listing status too
-       const { error: listingError } = await supabase
-         .from('listings')
-         .update({ status: 'in_progress' })
-         .eq('id', tx.listing_id)
-
-       if (listingError) console.log(listingError)
-     } else {
-       toast.success(isBuyer ? t('deals.buyerConfirmed') : t('deals.sellerConfirmed'));
-     }
+    if (bothConfirmed) toast.success(t('deals.bothConfirmed'));
+    else toast.success(isBuyer ? t('deals.buyerConfirmed') : t('deals.sellerConfirmed'));
 
     refetchAll();
     setConfirmLoading(null);
@@ -325,13 +313,13 @@ export default function Transactions() {
       if (authError) console.log(authError)
       const authUser = authData?.user
 
-      if (!authUser?.id || (authUser.email !== tx.seller_email && authUser.email !== tx.buyer_email)) {
+      if (!authUser?.id || (authUser.id !== tx.seller_id && authUser.id !== tx.buyer_id)) {
         toast.error('Only the buyer or seller can cancel this transaction.')
         setConfirmLoading(null)
         return
       }
 
-      const isBuyer = authUser.email === tx.buyer_email
+      const isBuyer = authUser.id === tx.buyer_id
 
       if (isBuyer && tx.buyer_confirmed) {
         toast.error('This purchase has already been confirmed.')
@@ -406,13 +394,6 @@ export default function Transactions() {
       .eq('id', tx.id)
 
     if (error) console.log(error)
-
-    const { error: listingError } = await supabase
-      .from('listings')
-      .update({ status: 'completed', is_sold: true })
-      .eq('id', tx.listing_id)
-
-    if (listingError) console.log(listingError)
     toast.success(t('deals.completedMsg'));
     refetchAll();
     setConfirmLoading(null);
@@ -511,7 +492,7 @@ export default function Transactions() {
               <TransactionCard
                 key={tx.id}
                 transaction={tx}
-                currentUserEmail={user.email}
+                currentUserId={user.id}
                 onConfirm={handleConfirm}
                 onRejectSale={handleRejectSale}
                 onComplete={handleComplete}
@@ -536,7 +517,7 @@ export default function Transactions() {
               <TransactionCard
                 key={tx.id}
                 transaction={tx}
-                currentUserEmail={user.email}
+                currentUserId={user.id}
                 onConfirm={handleConfirm}
                 onRejectSale={handleRejectSale}
                 onComplete={handleComplete}
@@ -559,7 +540,7 @@ export default function Transactions() {
               <TransactionCard
                 key={tx.id}
                 transaction={tx}
-                currentUserEmail={user.email}
+                currentUserId={user.id}
                 onConfirm={handleConfirm}
                 onRejectSale={handleRejectSale}
                 onComplete={handleComplete}
