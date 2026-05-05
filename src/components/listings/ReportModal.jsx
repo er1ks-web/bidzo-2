@@ -24,55 +24,51 @@ export default function ReportModal({
   sellerName: sellerNameOverride = null,
   sellerEmail: sellerEmailOverride = null,
 }) {
-  const { user, requireLogin } = useAuth();
+  const { requireLogin } = useAuth();
   const [reportDetails, setReportDetails] = useState('');
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleReport = async () => {
-    if (!user) {
+    console.log('[ReportModal] Submit clicked', {
+      listingId: listing?.id,
+      open,
+      submitting,
+      detailsLength: (reportDetails || '').length,
+    });
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) console.error('[ReportModal] supabase.auth.getUser() error', userError);
+    const authUser = userData?.user;
+
+    console.log('[ReportModal] Auth user', {
+      hasUser: !!authUser,
+      userId: authUser?.id,
+      email: authUser?.email,
+    });
+
+    if (!authUser) {
       requireLogin('Log in to report listings');
       return;
     }
 
     const sellerEmail = sellerEmailOverride || listing.seller_email || null;
     const sellerName = sellerNameOverride || listing.seller_name || (sellerEmail ? sellerEmail.split('@')[0] : 'Seller');
-    const reporterEmail = user.email;
+    const reporterEmail = authUser.email;
     const listingTitle = listing.title;
     const listingUrl = window.location.href;
-
-    const subject = `Report: ${listingTitle} (ID: ${listing.id})`;
-    const body = `
-Report Details
-==============
-
-Listing: ${listingTitle}
-Listing ID: ${listing.id}
-Seller: ${listing.seller_name} (${sellerEmail})
-Category: ${listing.category}
-Price: €${(listing.current_bid || listing.price)?.toFixed(2)}
-Listing URL: ${listingUrl}
-
-Reporter Email: ${reporterEmail}
-
-Additional Details:
-${reportDetails || '(No additional details provided)'}
-
----
-Please review this report and take appropriate action if necessary.
-`;
-
-    const mailtoLink = `mailto:support@bidzo.app?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
     setSubmitting(true);
     try {
       const basePayload = {
         listing_id: listing.id,
-        reporter_id: user.id,
+        reporter_id: authUser.id,
         reason: 'other',
         details: reportDetails || null,
         status: 'pending',
       };
+
+      console.log('[ReportModal] basePayload prepared', basePayload);
 
       const extendedPayload = {
         ...basePayload,
@@ -88,31 +84,37 @@ Please review this report and take appropriate action if necessary.
 
       let insertErr = null;
       {
+        console.log('[ReportModal] inserting extendedPayload into reports');
         const { error } = await supabase.from('reports').insert(extendedPayload);
         insertErr = error;
       }
 
+      if (!insertErr) {
+        console.log('[ReportModal] insert success (extendedPayload)');
+      }
+
       // If optional columns don't exist, retry with core columns only
       if (insertErr && insertErr.code === 'PGRST204') {
-        console.log(insertErr);
+        console.warn('[ReportModal] optional columns missing, retrying basePayload', insertErr);
         const { error } = await supabase.from('reports').insert(basePayload);
         insertErr = error;
       }
 
       if (insertErr) {
-        console.log(insertErr);
+        console.error('[ReportModal] insert failed', insertErr);
         toast.error('Failed to submit report. Please try again.');
         return;
       }
 
-      toast.success('Report submitted. Opening email client...');
-      window.location.href = mailtoLink;
+      console.log('[ReportModal] showing success toast and closing modal');
+      toast.success('Thanks for helping keep Bidzo safe — your report was submitted.');
       setOpen(false);
       setReportDetails('');
     } catch (err) {
-      console.log(err);
+      console.error('[ReportModal] unexpected error', err);
       toast.error('Failed to submit report. Please try again.');
     } finally {
+      console.log('[ReportModal] finished submit (finally)');
       setSubmitting(false);
     }
   };
@@ -133,7 +135,7 @@ Please review this report and take appropriate action if necessary.
         <AlertDialogHeader>
           <AlertDialogTitle>Report this listing</AlertDialogTitle>
           <AlertDialogDescription>
-            Report "{listing.title}" by {sellerNameOverride || listing.seller_name || 'Seller'}. Your email client will open with pre-filled information.
+            Report "{listing.title}" by {sellerNameOverride || listing.seller_name || 'Seller'}.
           </AlertDialogDescription>
         </AlertDialogHeader>
         

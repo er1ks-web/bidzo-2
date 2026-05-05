@@ -16,6 +16,29 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('login');
 
+  const handlePasswordReset = async () => {
+    if (loading) return
+    if (!email) {
+      toast.error('Enter your email first')
+      return
+    }
+
+    setLoading(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password',
+    })
+
+    if (error) {
+      console.log(error)
+      toast.error(error.message || 'Password reset failed')
+      setLoading(false)
+      return
+    }
+
+    toast.success('Password reset email sent')
+    setLoading(false)
+  }
+
   const handleGoogle = async () => {
     if (loading) return
     setLoading(true)
@@ -153,6 +176,19 @@ export default function Login() {
               required
             />
           </div>
+
+          {mode === 'login' && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handlePasswordReset}
+                disabled={loading}
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
 
           <Button
             type="submit"

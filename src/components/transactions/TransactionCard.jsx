@@ -40,8 +40,10 @@ export default function TransactionCard({
 }) {
   const [sellerCancelOpen, setSellerCancelOpen] = useState(false)
   const [sellerCancelAck, setSellerCancelAck] = useState(false)
+  const [sellerCancelReason, setSellerCancelReason] = useState('')
   const [buyerCancelOpen, setBuyerCancelOpen] = useState(false)
   const [buyerCancelAck, setBuyerCancelAck] = useState(false)
+  const [buyerCancelReason, setBuyerCancelReason] = useState('')
 
   const isBuyer = currentUserEmail === transaction.buyer_email;
   const isSeller = currentUserEmail === transaction.seller_email;
@@ -215,7 +217,10 @@ export default function TransactionCard({
             open={sellerCancelOpen}
             onOpenChange={(v) => {
               setSellerCancelOpen(v)
-              if (!v) setSellerCancelAck(false)
+              if (!v) {
+                setSellerCancelAck(false)
+                setSellerCancelReason('')
+              }
             }}
           >
             <AlertDialogTrigger asChild>
@@ -237,6 +242,56 @@ export default function TransactionCard({
                 </AlertDialogDescription>
               </AlertDialogHeader>
 
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Reason</p>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`seller-cancel-reason-${transaction.id}`}
+                      value="changed_mind"
+                      checked={sellerCancelReason === 'changed_mind'}
+                      onChange={(e) => setSellerCancelReason(e.target.value)}
+                      className="cursor-pointer"
+                    />
+                    I changed my mind
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`seller-cancel-reason-${transaction.id}`}
+                      value="buyer_inactive"
+                      checked={sellerCancelReason === 'buyer_inactive'}
+                      onChange={(e) => setSellerCancelReason(e.target.value)}
+                      className="cursor-pointer"
+                    />
+                    Buyer is inactive / not responding
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`seller-cancel-reason-${transaction.id}`}
+                      value="shipping_problem"
+                      checked={sellerCancelReason === 'shipping_problem'}
+                      onChange={(e) => setSellerCancelReason(e.target.value)}
+                      className="cursor-pointer"
+                    />
+                    Shipping / meetup problem
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`seller-cancel-reason-${transaction.id}`}
+                      value="other"
+                      checked={sellerCancelReason === 'other'}
+                      onChange={(e) => setSellerCancelReason(e.target.value)}
+                      className="cursor-pointer"
+                    />
+                    Other
+                  </label>
+                </div>
+              </div>
+
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
@@ -256,8 +311,8 @@ export default function TransactionCard({
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={confirmLoading === transaction.id}>Keep Sale</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={() => onRejectSale?.(transaction)}
-                  disabled={confirmLoading === transaction.id || !sellerCancelAck}
+                  onClick={() => onRejectSale?.(transaction, sellerCancelReason)}
+                  disabled={confirmLoading === transaction.id || !sellerCancelAck || !sellerCancelReason}
                   className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
                   Reject Sale
@@ -272,7 +327,10 @@ export default function TransactionCard({
             open={buyerCancelOpen}
             onOpenChange={(v) => {
               setBuyerCancelOpen(v)
-              if (!v) setBuyerCancelAck(false)
+              if (!v) {
+                setBuyerCancelAck(false)
+                setBuyerCancelReason('')
+              }
             }}
           >
             <AlertDialogTrigger asChild>
@@ -294,6 +352,56 @@ export default function TransactionCard({
                 </AlertDialogDescription>
               </AlertDialogHeader>
 
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Reason</p>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`buyer-cancel-reason-${transaction.id}`}
+                      value="changed_mind"
+                      checked={buyerCancelReason === 'changed_mind'}
+                      onChange={(e) => setBuyerCancelReason(e.target.value)}
+                      className="cursor-pointer"
+                    />
+                    I changed my mind
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`buyer-cancel-reason-${transaction.id}`}
+                      value="seller_inactive"
+                      checked={buyerCancelReason === 'seller_inactive'}
+                      onChange={(e) => setBuyerCancelReason(e.target.value)}
+                      className="cursor-pointer"
+                    />
+                    Seller is inactive / not responding
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`buyer-cancel-reason-${transaction.id}`}
+                      value="shipping_problem"
+                      checked={buyerCancelReason === 'shipping_problem'}
+                      onChange={(e) => setBuyerCancelReason(e.target.value)}
+                      className="cursor-pointer"
+                    />
+                    Shipping / meetup problem
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`buyer-cancel-reason-${transaction.id}`}
+                      value="other"
+                      checked={buyerCancelReason === 'other'}
+                      onChange={(e) => setBuyerCancelReason(e.target.value)}
+                      className="cursor-pointer"
+                    />
+                    Other
+                  </label>
+                </div>
+              </div>
+
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
@@ -313,8 +421,8 @@ export default function TransactionCard({
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={confirmLoading === transaction.id}>Keep Purchase</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={() => onRejectSale?.(transaction)}
-                  disabled={confirmLoading === transaction.id || !buyerCancelAck}
+                  onClick={() => onRejectSale?.(transaction, buyerCancelReason)}
+                  disabled={confirmLoading === transaction.id || !buyerCancelAck || !buyerCancelReason}
                   className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
                   Cancel Purchase

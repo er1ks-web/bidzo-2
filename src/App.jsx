@@ -1,4 +1,4 @@
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from 'sonner'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
@@ -28,6 +28,7 @@ import HowItWorks from '@/pages/HowItWorks';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
 import AuthCallback from '@/pages/AuthCallback';
+import ResetPassword from '@/pages/ResetPassword';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 
 const AuthenticatedApp = () => {
@@ -56,6 +57,7 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/browse" element={<Browse />} />
         <Route path="/listing/:id" element={<ListingDetail />} />
         <Route path="/seller/:id" element={<PublicProfile />} />
@@ -87,7 +89,19 @@ function App() {
           <Router>
             <AuthenticatedApp />
           </Router>
-          <Toaster />
+          <Toaster
+            richColors
+            position="bottom-center"
+            toastOptions={{
+              classNames: {
+                toast:
+                  '!bg-black border border-white/10 shadow-lg data-[type=success]:!bg-black data-[type=error]:!bg-black data-[type=success]:!border-emerald-500 data-[type=success]:border-2 data-[type=success]:!text-emerald-400 data-[type=success]:[&_*]:!text-emerald-400 !text-white',
+                description: 'text-white/70 data-[type=success]:!text-emerald-300',
+                actionButton: 'bg-emerald-600 text-white',
+                cancelButton: 'bg-white/10 text-white',
+              },
+            }}
+          />
         </I18nProvider>
       </QueryClientProvider>
     </AuthProvider>

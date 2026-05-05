@@ -317,7 +317,7 @@ export default function Transactions() {
     setConfirmLoading(null);
   };
 
-  const handleRejectSale = async (tx) => {
+  const handleRejectSale = async (tx, reason) => {
     setConfirmLoading(tx.id)
 
     try {
@@ -345,8 +345,15 @@ export default function Transactions() {
         return
       }
 
+      if (!reason) {
+        toast.error('Please select a cancellation reason.')
+        setConfirmLoading(null)
+        return
+      }
+
       const { error: rpcError } = await supabase.rpc('cancel_transaction', {
         p_tx_id: tx.id,
+        p_reason: reason,
       })
 
       if (rpcError) {
@@ -423,7 +430,11 @@ export default function Transactions() {
   const activeSeller = asSeller.filter(t => t.status !== 'completed' && t.status !== 'cancelled');
   const completedAll = [...asBuyer, ...asSeller]
     .filter(t => t.status === 'completed' || t.status === 'cancelled')
-    .sort((a, b) => new Date(b.completed_at || b.updated_date) - new Date(a.completed_at || a.updated_date));
+    .sort((a, b) => {
+      const bTime = new Date(b.completed_at || b.updated_date).getTime()
+      const aTime = new Date(a.completed_at || a.updated_date).getTime()
+      return bTime - aTime
+    });
   const isLoading = loadingBuyer || loadingSeller;
 
   return (
