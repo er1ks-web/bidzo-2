@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/supabase'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,11 +65,44 @@ export default function EditProfileCard({ user, profile, lang, onProfileSaved })
     profile_picture_url: profile?.profile_picture_url || '',
     bio: profile?.bio || '',
   });
+  const [hydrated, setHydrated] = useState(false);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef();
+
+  useEffect(() => {
+    if (hydrated) return;
+    if (!user?.id) return;
+
+    setForm({
+      full_name: user?.full_name || '',
+      username: profile?.username || '',
+      phone_number: profile?.phone_number || '',
+      city: profile?.city || '',
+      profile_picture_url: profile?.profile_picture_url || '',
+      bio: profile?.bio || '',
+    });
+    setHydrated(true);
+  }, [hydrated, user?.id, user?.full_name, profile?.username, profile?.phone_number, profile?.city, profile?.profile_picture_url, profile?.bio]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!profile) return;
+
+    setForm((f) => {
+      // Only fill missing fields from profile/user; don't clobber user edits.
+      const next = { ...f };
+      if (!next.username && profile?.username) next.username = profile.username;
+      if (!next.phone_number && profile?.phone_number) next.phone_number = profile.phone_number;
+      if (!next.city && profile?.city) next.city = profile.city;
+      if (!next.profile_picture_url && profile?.profile_picture_url) next.profile_picture_url = profile.profile_picture_url;
+      if (!next.bio && profile?.bio) next.bio = profile.bio;
+      if (!next.full_name && user?.full_name) next.full_name = user.full_name;
+      return next;
+    });
+  }, [hydrated, profile, user?.full_name]);
 
   const validate = () => {
     const errs = {};
