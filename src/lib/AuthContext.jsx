@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('*')
+            .select('id,username,phone_number')
             .eq('id', currentUser.id)
             .limit(1)
 
@@ -66,7 +66,6 @@ export const AuthProvider = ({ children }) => {
               .insert({
                 id: currentUser.id,
                 email: currentUser.email,
-                full_name: currentUser.user_metadata?.full_name || currentUser.email,
                 profile_picture_url: currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || '',
               })
 

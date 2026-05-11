@@ -184,7 +184,6 @@ export default function EditProfileCard({ user, profile, lang, onProfileSaved })
 
     const profileData = {
       id: user.id,
-      email: user.email,
       username: form.username.trim(),
       phone_number: form.phone_number.trim(),
       city: form.city.trim(),

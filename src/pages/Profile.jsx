@@ -100,7 +100,7 @@ export default function Profile() {
 
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id,username,phone_number,city,profile_picture_url,bio,created_at,strikes_count,can_bid,can_create_listings,restricted_until,buyer_cancellations_count,seller_cancellations_count,bid_restricted_until,listing_restricted_until')
         .eq('id', authUser.id)
         .limit(1)
 
@@ -127,7 +127,7 @@ export default function Profile() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id,username,phone_number,city,profile_picture_url,bio,created_at,strikes_count,can_bid,can_create_listings,restricted_until,buyer_cancellations_count,seller_cancellations_count,bid_restricted_until,listing_restricted_until')
         .eq('id', user.id)
         .limit(1)
 
@@ -136,14 +136,7 @@ export default function Profile() {
       const profile = Array.isArray(data) ? (data[0] || null) : null
       if (profile) return profile
 
-      const { data: created, error: createError } = await supabase
-        .from('profiles')
-        .insert({ id: user.id, email: user.email })
-        .select('*')
-        .single()
-
-      if (createError) console.log(createError)
-      return created || null
+      return null
     },
     enabled: !!user,
   });

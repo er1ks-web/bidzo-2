@@ -70,7 +70,7 @@ export default function AuthCallback() {
         if (u?.id && u?.email) {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('*')
+            .select('id')
             .eq('id', u.id)
             .limit(1)
 
@@ -83,7 +83,6 @@ export default function AuthCallback() {
               .insert({
                 id: u.id,
                 email: u.email,
-                full_name: u.user_metadata?.full_name || u.email,
                 profile_picture_url: u.user_metadata?.avatar_url || u.user_metadata?.picture || '',
               })
 

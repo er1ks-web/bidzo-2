@@ -62,7 +62,7 @@ export default function Messages() {
 
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id,username,profile_picture_url,can_bid,bid_restricted_until,can_create_listings,listing_restricted_until,restricted_until,strikes_count')
         .eq('id', authUser.id)
         .limit(1)
 

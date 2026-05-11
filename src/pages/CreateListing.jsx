@@ -76,7 +76,7 @@ export default function CreateListing() {
 
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id,can_create_listings,listing_restricted_until,restricted_until')
         .eq('id', authUser.id)
 
       if (profileError) console.log(profileError)
