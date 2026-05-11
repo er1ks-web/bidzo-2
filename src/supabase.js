@@ -9,3 +9,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     detectSessionInUrl: true,
   },
 })
+
+if (import.meta.env.DEV) {
+  window.supabase = supabase
+}

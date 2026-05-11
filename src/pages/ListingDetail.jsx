@@ -487,10 +487,13 @@ export default function ListingDetail() {
                 current_bid: currentBidFallback,
                 highest_bidder: highestBidderFallback,
                 highest_bidder_name: highestBidderNameFallback,
+                top_bid_id: topBid?.id || null,
               }}
               onAccepted={() => {
                 queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
                 queryClient.invalidateQueries({ queryKey: ['bids', listingId] });
+                queryClient.invalidateQueries({ queryKey: ['tx-buyer'], exact: false });
+                queryClient.invalidateQueries({ queryKey: ['tx-seller'], exact: false });
               }}
             />
           )}

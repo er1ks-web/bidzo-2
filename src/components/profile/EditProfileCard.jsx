@@ -172,32 +172,66 @@ export default function EditProfileCard({ user, profile, lang, onProfileSaved })
       }
     }
 
-    // Update full_name on auth user
-    if (form.full_name !== user.full_name) {
-      const { error } = await supabase.auth.updateUser({
+    const nextUsername = form.username.trim();
+    const nextPhone = form.phone_number.trim();
+    const nextCity = form.city.trim();
+    const nextBio = form.bio.trim();
+    const nextAvatar = form.profile_picture_url;
+
+    const willUpdateAuthName = form.full_name !== user.full_name;
+    const willUpdateProfile = !!(
+      nextUsername !== (profile?.username || '') ||
+      nextPhone !== (profile?.phone_number || '') ||
+      nextCity !== (profile?.city || '') ||
+      nextBio !== (profile?.bio || '') ||
+      nextAvatar !== (profile?.profile_picture_url || '')
+    );
+
+    let profileSaved = false;
+    let authNameSaved = false;
+
+    if (willUpdateProfile) {
+      const profileData = {
+        username: nextUsername,
+        phone_number: nextPhone,
+        city: nextCity,
+        profile_picture_url: nextAvatar,
+        bio: nextBio,
+      };
+
+      const { data: updatedRow, error: profileError } = await supabase
+        .from('profiles')
+        .update(profileData)
+        .eq('id', user.id)
+        .select('id')
+        .maybeSingle()
+
+      if (profileError) {
+        console.log(profileError)
+        toast.error(profileError.message || 'Failed to save profile')
+      } else if (!updatedRow?.id) {
+        toast.error('Failed to save profile (not authorized)')
+      } else {
+        profileSaved = true;
+      }
+    }
+
+    if (willUpdateAuthName) {
+      const { error: authUpdateError } = await supabase.auth.updateUser({
         data: {
           full_name: form.full_name,
         },
       })
-      if (error) console.log(error)
+
+      if (authUpdateError) {
+        console.log(authUpdateError)
+        toast.error(authUpdateError.message || 'Failed to save name')
+      } else {
+        authNameSaved = true;
+      }
     }
 
-    const profileData = {
-      id: user.id,
-      username: form.username.trim(),
-      phone_number: form.phone_number.trim(),
-      city: form.city.trim(),
-      profile_picture_url: form.profile_picture_url,
-      bio: form.bio.trim(),
-    };
-
-    const { error: upsertError } = await supabase
-      .from('profiles')
-      .upsert(profileData, { onConflict: 'id' })
-
-    if (upsertError) {
-      console.log(upsertError)
-      toast.error('Failed to save profile')
+    if ((willUpdateProfile && !profileSaved) || (willUpdateAuthName && !authNameSaved)) {
       setSaving(false);
       return
     }
