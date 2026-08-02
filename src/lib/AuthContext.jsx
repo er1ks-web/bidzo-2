@@ -72,9 +72,7 @@ export const AuthProvider = ({ children }) => {
             if (insertError) console.log(insertError)
             setNeedsOnboarding(true)
           } else {
-            const missingUsername = !profile.username
-            const missingPhone = !profile.phone_number
-            setNeedsOnboarding(missingUsername || missingPhone)
+            setNeedsOnboarding(!profile.username)
           }
         } catch (e) {
           console.log(e)
