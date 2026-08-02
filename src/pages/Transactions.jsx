@@ -279,24 +279,16 @@ export default function Transactions() {
   const handleConfirm = async (tx) => {
     setConfirmLoading(tx.id);
     const isBuyer = user.id === tx.buyer_id;
-    const updates = isBuyer
-      ? { buyer_confirmed: true, buyer_confirmed_at: new Date().toISOString() }
-      : { seller_confirmed: true, seller_confirmed_at: new Date().toISOString() };
-
-    // Check if both will now be confirmed
     const bothConfirmed = isBuyer ? tx.seller_confirmed : tx.buyer_confirmed;
-    if (bothConfirmed) {
-      updates.status = 'in_progress';
-    } else {
-      updates.status = isBuyer ? 'buyer_confirmed' : 'seller_confirmed';
+
+    const { error } = await supabase.rpc('confirm_transaction', { p_tx_id: tx.id })
+
+    if (error) {
+      console.log(error)
+      toast.error(error.message || 'Failed to confirm')
+      setConfirmLoading(null);
+      return
     }
-
-    const { error } = await supabase
-      .from('auction_transactions')
-      .update(updates)
-      .eq('id', tx.id)
-
-    if (error) console.log(error)
 
     if (bothConfirmed) toast.success(t('deals.bothConfirmed'));
     else toast.success(isBuyer ? t('deals.buyerConfirmed') : t('deals.sellerConfirmed'));
@@ -367,16 +359,18 @@ export default function Transactions() {
 
   const handleMarkShippedConfirm = async (shippingInfo) => {
     setConfirmLoading(shippedModalTx.id);
-    const { error } = await supabase
-      .from('auction_transactions')
-      .update({
-      shipped: true,
-      shipped_at: new Date().toISOString(),
-      ...(shippingInfo ? { shipping_info: shippingInfo } : {}),
-      })
-      .eq('id', shippedModalTx.id)
+    const { error } = await supabase.rpc('mark_transaction_shipped', {
+      p_tx_id: shippedModalTx.id,
+      p_shipping_info: shippingInfo || null,
+    })
 
-    if (error) console.log(error)
+    if (error) {
+      console.log(error)
+      toast.error(error.message || 'Failed to mark as shipped')
+      setShippedModalTx(null);
+      setConfirmLoading(null);
+      return
+    }
     toast.success(t('deals.markedShipped'));
     setShippedModalTx(null);
     refetchAll();
@@ -385,15 +379,14 @@ export default function Transactions() {
 
   const handleComplete = async (tx) => {
     setConfirmLoading(tx.id);
-    const { error } = await supabase
-      .from('auction_transactions')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-      })
-      .eq('id', tx.id)
+    const { error } = await supabase.rpc('mark_transaction_received', { p_tx_id: tx.id })
 
-    if (error) console.log(error)
+    if (error) {
+      console.log(error)
+      toast.error(error.message || 'Failed to mark as received')
+      setConfirmLoading(null);
+      return
+    }
     toast.success(t('deals.completedMsg'));
     refetchAll();
     setConfirmLoading(null);

@@ -55,24 +55,10 @@ export default function ListingDetail() {
     localStorage.setItem(key, String(now));
     const timer = setTimeout(async () => {
       try {
-        const { data, error } = await supabase
-          .from('listings')
-          .select('*')
-          .eq('id', listingId)
-
+        const { error } = await supabase.rpc('increment_listing_view', { p_listing_id: listingId })
         if (error) console.log(error)
-
-        if (Array.isArray(data) && data[0]) {
-          const current = data[0]
-          const { error: updateError } = await supabase
-            .from('listings')
-            .update({ views: (current.views || 0) + 1 })
-            .eq('id', listingId)
-
-          if (updateError) console.log(updateError)
-          // Refresh the listing query so the new view count displays
-          queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
-        }
+        // Refresh the listing query so the new view count displays
+        queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
       } catch {}
     }, 1500);
     return () => clearTimeout(timer);
