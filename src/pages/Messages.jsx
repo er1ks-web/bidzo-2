@@ -237,6 +237,32 @@ export default function Messages() {
     }
   }, [lastActiveMessageId]);
 
+  // Which listing is this conversation currently about -- the most recent
+  // message that was sent with a listing attached (a conversation with the
+  // same person can span multiple items over time).
+  const activeListingId = (() => {
+    for (let i = activeMessages.length - 1; i >= 0; i--) {
+      if (activeMessages[i]?.listing_id) return activeMessages[i].listing_id;
+    }
+    return null;
+  })();
+
+  const [activeListingPreview, setActiveListingPreview] = useState(null);
+  useEffect(() => {
+    if (!activeListingId) { setActiveListingPreview(null); return; }
+    (async () => {
+      const { data, error } = await supabase
+        .from('listings')
+        .select('id,title,images,price,current_bid,listing_type,is_deleted')
+        .eq('id', activeListingId)
+        .limit(1)
+
+      if (error) console.log(error)
+      const row = Array.isArray(data) ? (data[0] || null) : null
+      setActiveListingPreview(row && !row.is_deleted ? row : null)
+    })()
+  }, [activeListingId]);
+
   // Build conversation list
   const convMap = {};
   messages.forEach(msg => {
@@ -568,11 +594,40 @@ export default function Messages() {
                 )}
               </div>
 
+              {activeListingPreview && (
+                <Link
+                  to={`/listing/${activeListingPreview.id}`}
+                  className="flex items-center gap-3 px-4 py-2.5 border-b bg-muted/40 hover:bg-muted/70 transition-colors"
+                >
+                  <img
+                    src={activeListingPreview.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&h=100&fit=crop'}
+                    alt={activeListingPreview.title}
+                    className="w-10 h-10 rounded-lg object-cover shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground">About this listing</p>
+                    <p className="text-sm font-medium truncate">{activeListingPreview.title}</p>
+                  </div>
+                  <span className="text-sm font-bold text-accent shrink-0">
+                    €{(activeListingPreview.listing_type === 'auction'
+                      ? (activeListingPreview.current_bid ?? activeListingPreview.price)
+                      : activeListingPreview.price
+                    )?.toFixed(2)}
+                  </span>
+                </Link>
+              )}
+
               <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ overflowAnchor: 'none' }}>
                 <AnimatePresence initial={false}>
-                  {activeMessages.map((msg) => {
+                  {activeMessages.map((msg, idx) => {
                     const isMine = msg.sender_id === user.id;
                     const isSystem = false;
+                    // "Seen" only shows under the very last thing you sent, and
+                    // only once the other person has actually read it -- same
+                    // convention as iMessage/WhatsApp, not on every message.
+                    const isLastMineRead = isMine && msg.is_read && !activeMessages
+                      .slice(idx + 1)
+                      .some(m => m.sender_id === user.id);
                     return (
                       <motion.div
                         key={msg.id}
@@ -596,29 +651,34 @@ export default function Messages() {
                             <p className="text-[10px] text-muted-foreground mt-1">{format(new Date(msg.created_date), 'HH:mm')}</p>
                           </div>
                         ) : (
-                          <div className={cn(
-                            "max-w-[75%] rounded-2xl text-sm overflow-hidden",
-                            isMine
-                              ? "bg-primary text-primary-foreground rounded-br-sm"
-                              : "bg-muted rounded-bl-sm",
-                            msg._optimistic && "opacity-60"
-                          )}>
-                            {msg.image_url && (
-                              <img
-                                src={msg.image_url}
-                                alt="attachment"
-                                className="max-w-full max-h-60 object-cover w-full"
-                              />
-                            )}
-                            <div className="px-4 py-2.5">
-                              {msg.content && <p>{msg.content}</p>}
-                              <p className={cn(
-                                "text-[10px] mt-1",
-                                isMine ? "text-primary-foreground/60" : "text-muted-foreground"
-                              )}>
-                                {format(new Date(msg.created_date), 'HH:mm')}
-                              </p>
+                          <div className={cn("flex flex-col", isMine ? "items-end" : "items-start")}>
+                            <div className={cn(
+                              "max-w-[75%] rounded-2xl text-sm overflow-hidden",
+                              isMine
+                                ? "bg-primary text-primary-foreground rounded-br-sm"
+                                : "bg-muted rounded-bl-sm",
+                              msg._optimistic && "opacity-60"
+                            )}>
+                              {msg.image_url && (
+                                <img
+                                  src={msg.image_url}
+                                  alt="attachment"
+                                  className="max-w-full max-h-60 object-cover w-full"
+                                />
+                              )}
+                              <div className="px-4 py-2.5">
+                                {msg.content && <p>{msg.content}</p>}
+                                <p className={cn(
+                                  "text-[10px] mt-1",
+                                  isMine ? "text-primary-foreground/60" : "text-muted-foreground"
+                                )}>
+                                  {format(new Date(msg.created_date), 'HH:mm')}
+                                </p>
+                              </div>
                             </div>
+                            {isLastMineRead && (
+                              <span className="text-[10px] text-muted-foreground mt-1 mr-1">Seen</span>
+                            )}
                           </div>
                         )}
                       </motion.div>
