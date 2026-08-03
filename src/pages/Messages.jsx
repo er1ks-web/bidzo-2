@@ -3,7 +3,7 @@ import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabase'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, User, ArrowLeft, Trash2, ImagePlus, X } from 'lucide-react';
+import { Send, User, ArrowLeft, Trash2, ImagePlus, X, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -618,6 +618,16 @@ export default function Messages() {
               )}
 
               <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ overflowAnchor: 'none' }}>
+                {activeMessages.length === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground gap-2 px-6">
+                    <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-1">
+                      <MessageCircle className="w-6 h-6 text-accent" />
+                    </div>
+                    <p className="text-sm">
+                      Say hello to <span className="font-semibold text-foreground">{activeRecipientDisplay}</span> — pick a quick question below or write your own.
+                    </p>
+                  </div>
+                )}
                 <AnimatePresence initial={false}>
                   {activeMessages.map((msg, idx) => {
                     const isMine = msg.sender_id === user.id;
@@ -651,9 +661,9 @@ export default function Messages() {
                             <p className="text-[10px] text-muted-foreground mt-1">{format(new Date(msg.created_date), 'HH:mm')}</p>
                           </div>
                         ) : (
-                          <div className={cn("flex flex-col", isMine ? "items-end" : "items-start")}>
+                          <div className={cn("flex flex-col max-w-[75%]", isMine ? "items-end" : "items-start")}>
                             <div className={cn(
-                              "max-w-[75%] rounded-2xl text-sm overflow-hidden",
+                              "rounded-2xl text-sm overflow-hidden",
                               isMine
                                 ? "bg-primary text-primary-foreground rounded-br-sm"
                                 : "bg-muted rounded-bl-sm",
@@ -706,6 +716,20 @@ export default function Messages() {
                     </div>
                   </div>
                 )}
+                {activeMessages.length === 0 && (
+                  <div className="px-4 pt-3 flex gap-2 overflow-x-auto">
+                    {['Is this still available?', 'Would you take a lower offer?', 'What condition is it in?', 'Can you ship this?'].map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => setNewMessage(suggestion)}
+                        className="shrink-0 text-xs font-medium text-foreground bg-muted hover:bg-accent/15 hover:text-accent border border-border rounded-full px-3 py-1.5 transition-colors whitespace-nowrap"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="p-4 flex gap-2 items-center">
                   <input
                     ref={imageInputRef}
@@ -742,8 +766,12 @@ export default function Messages() {
               </div>}
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <p>{t('messages.noMessages')}</p>
+            <div className="flex-1 hidden sm:flex flex-col items-center justify-center text-center text-muted-foreground px-6 gap-2">
+              <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mb-1">
+                <MessageCircle className="w-7 h-7 text-accent" />
+              </div>
+              <p className="font-medium text-foreground">Your conversations live here</p>
+              <p className="text-sm max-w-xs">Pick a chat on the left, or say hello to a seller from any listing to get started.</p>
             </div>
           )}
         </div>
