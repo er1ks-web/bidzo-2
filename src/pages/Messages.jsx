@@ -51,9 +51,10 @@ export default function Messages() {
   const [recipientId, setRecipientId] = useState(params.get('toId') || null);
   const [recipientName, setRecipientName] = useState(params.get('toName') || '');
   const [sending, setSending] = useState(false);
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const MAX_MESSAGE_IMAGES = 5;
   const imageInputRef = useRef(null);
   // Map user_id -> { email, username, avatar } from profiles
   const [profileMap, setProfileMap] = useState({});
@@ -315,46 +316,72 @@ export default function Messages() {
   });
 
   const handleImageSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files || []);
     e.target.value = '';
+    if (!files.length) return;
+
+    setImageFiles(prev => {
+      const remaining = MAX_MESSAGE_IMAGES - prev.length;
+      if (remaining <= 0) {
+        toast.error(`You can attach up to ${MAX_MESSAGE_IMAGES} images.`);
+        return prev;
+      }
+      const toAdd = files.slice(0, remaining);
+      if (files.length > toAdd.length) {
+        toast.error(`Only added ${toAdd.length} — max ${MAX_MESSAGE_IMAGES} images per message.`);
+      }
+      setImagePreviews(prevPreviews => [...prevPreviews, ...toAdd.map(f => URL.createObjectURL(f))]);
+      return [...prev, ...toAdd];
+    });
   };
 
-  const clearImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  const removeImageAt = (index) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const clearImages = () => {
+    setImageFiles([]);
+    setImagePreviews([]);
   };
 
   const handleSend = async () => {
-    if (!newMessage.trim() && !imageFile) return;
+    if (!newMessage.trim() && imageFiles.length === 0) return;
     if (!user || sending) return;
     setSending(true);
 
-    let uploadedImageUrl = null;
-    if (imageFile) {
+    let uploadedImageUrls = [];
+    if (imageFiles.length > 0) {
       setUploadingImage(true);
-      try {
-        const ext = (imageFile.name || 'png').split('.').pop() || 'png'
-        const path = `messages/${user.id}/${Date.now()}.${ext}`
-        const { error: uploadError } = await supabase
-          .storage
-          .from('message-images')
-          .upload(path, imageFile, { upsert: false })
+      const results = await Promise.all(imageFiles.map(async (file, i) => {
+        try {
+          const ext = (file.name || 'png').split('.').pop() || 'png'
+          const path = `messages/${user.id}/${Date.now()}_${i}.${ext}`
+          const { error: uploadError } = await supabase
+            .storage
+            .from('message-images')
+            .upload(path, file, { upsert: false })
 
-        if (uploadError) throw uploadError
+          if (uploadError) throw uploadError
 
-        const { data: pub } = supabase
-          .storage
-          .from('message-images')
-          .getPublicUrl(path)
+          const { data: pub } = supabase
+            .storage
+            .from('message-images')
+            .getPublicUrl(path)
 
-        uploadedImageUrl = pub?.publicUrl || null
-      } catch (e) {
-        console.log(e)
-        uploadedImageUrl = null
-        toast.error('Failed to attach image — sending message without it')
+          return pub?.publicUrl || null
+        } catch (e) {
+          console.log(e)
+          return null
+        }
+      }))
+
+      uploadedImageUrls = results.filter(Boolean)
+      const failedCount = imageFiles.length - uploadedImageUrls.length
+      if (failedCount > 0) {
+        toast.error(uploadedImageUrls.length > 0
+          ? `${failedCount} image${failedCount > 1 ? 's' : ''} failed to attach — sending the rest`
+          : 'Failed to attach images — sending message without them')
       }
       setUploadingImage(false);
     }
@@ -387,7 +414,7 @@ export default function Messages() {
       sender_id: user.id,
       recipient_id: recipientUserId,
       content,
-      image_url: uploadedImageUrl || imagePreview,
+      image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : (imagePreviews.length > 0 ? imagePreviews : null),
       is_read: false,
       created_date: new Date().toISOString(),
       _optimistic: true,
@@ -395,7 +422,7 @@ export default function Messages() {
 
     setMessages(prev => [...prev, optimistic]);
     setNewMessage('');
-    clearImage();
+    clearImages();
     if (!activeConv) setActiveConv(convId);
 
     try {
@@ -409,7 +436,7 @@ export default function Messages() {
           sender_id: user.id,
           recipient_id: recipientUserId,
           content,
-          image_url: uploadedImageUrl || null,
+          image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : null,
           is_read: false,
         })
         .select('*')
@@ -462,10 +489,11 @@ export default function Messages() {
   const activeRecipientEmail = activeRecipientProfile?.email || recipientEmail
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-      <h1 className="text-2xl font-display font-bold mb-6">{t('messages.title')}</h1>
+    <div style={{ backgroundImage: 'radial-gradient(ellipse 900px 420px at 50% 0%, hsl(var(--accent) / 0.05), transparent 70%)' }}>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+        <h1 className="text-2xl font-display font-bold mb-6">{t('messages.title')}</h1>
 
-      <div className="bg-card rounded-xl border overflow-hidden h-[70vh] flex">
+        <div className="bg-card rounded-xl border overflow-hidden h-[70vh] flex">
         {/* Conversation list */}
         <div className={cn(
           "w-full sm:w-80 border-r flex flex-col",
@@ -476,7 +504,10 @@ export default function Messages() {
           <div className="p-3 border-b">
             <p className="text-sm font-medium text-muted-foreground">{convList.length} conversations</p>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div
+            className="flex-1 overflow-y-auto"
+            style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, hsl(var(--accent) / 0.06), transparent 55%)' }}
+          >
             {convList.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground text-sm">
                 {t('messages.noMessages')}
@@ -523,7 +554,11 @@ export default function Messages() {
                           {displayName}
                         </p>
                         <p className={cn("text-xs truncate", unread > 0 ? "text-foreground" : "text-muted-foreground")}>
-                          {conv.lastMessage.content || (conv.lastMessage.image_url ? '📷 Photo' : '')}
+                          {conv.lastMessage.content || (
+                            conv.lastMessage.image_urls?.length > 1
+                              ? `📷 ${conv.lastMessage.image_urls.length} Photos`
+                              : (conv.lastMessage.image_urls?.length === 1 || conv.lastMessage.image_url) ? '📷 Photo' : ''
+                          )}
                         </p>
                       </div>
                       <span className="text-[10px] text-muted-foreground shrink-0">
@@ -699,13 +734,33 @@ export default function Messages() {
                                 : "bg-muted rounded-bl-sm",
                               msg._optimistic && "opacity-60"
                             )}>
-                              {msg.image_url && (
-                                <img
-                                  src={msg.image_url}
-                                  alt="attachment"
-                                  className="max-w-full max-h-60 object-cover w-full"
-                                />
-                              )}
+                              {(() => {
+                                // New messages use image_urls (array, up to 5);
+                                // old messages only ever had the single image_url.
+                                const imgs = msg.image_urls?.length ? msg.image_urls : (msg.image_url ? [msg.image_url] : []);
+                                if (imgs.length === 0) return null;
+                                if (imgs.length === 1) {
+                                  return (
+                                    <img
+                                      src={imgs[0]}
+                                      alt="attachment"
+                                      className="max-w-full max-h-60 object-cover w-full"
+                                    />
+                                  );
+                                }
+                                return (
+                                  <div className="grid grid-cols-2 gap-0.5">
+                                    {imgs.map((url, i) => (
+                                      <img
+                                        key={i}
+                                        src={url}
+                                        alt={`attachment ${i + 1}`}
+                                        className="w-full h-28 object-cover"
+                                      />
+                                    ))}
+                                  </div>
+                                );
+                              })()}
                               <div className="px-4 py-2.5">
                                 {msg.content && <p>{msg.content}</p>}
                                 <p className={cn(
@@ -736,17 +791,29 @@ export default function Messages() {
                   This is a notifications channel from Bidzo Team — you cannot reply here.
                 </div>
               ) : <div className="border-t">
-                {imagePreview && (
-                  <div className="px-4 pt-3 flex items-start gap-2">
-                    <div className="relative inline-block">
-                      <img src={imagePreview} alt="preview" className="h-20 w-20 object-cover rounded-lg border" />
+                {imagePreviews.length > 0 && (
+                  <div className="px-4 pt-3 flex items-start gap-2 overflow-x-auto">
+                    {imagePreviews.map((preview, i) => (
+                      <div key={i} className="relative inline-block shrink-0">
+                        <img src={preview} alt={`preview ${i + 1}`} className="h-20 w-20 object-cover rounded-lg border" />
+                        <button
+                          onClick={() => removeImageAt(i)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive rounded-full flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ))}
+                    {imagePreviews.length < MAX_MESSAGE_IMAGES && (
                       <button
-                        onClick={clearImage}
-                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive rounded-full flex items-center justify-center"
+                        type="button"
+                        onClick={() => imageInputRef.current?.click()}
+                        className="h-20 w-20 shrink-0 rounded-lg border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-accent hover:text-accent transition-colors"
                       >
-                        <X className="w-3 h-3 text-white" />
+                        <ImagePlus className="w-4 h-4" />
+                        <span className="text-[10px]">{imagePreviews.length}/{MAX_MESSAGE_IMAGES}</span>
                       </button>
-                    </div>
+                    )}
                   </div>
                 )}
                 {activeMessages.length === 0 && (
@@ -768,6 +835,7 @@ export default function Messages() {
                     ref={imageInputRef}
                     type="file"
                     accept="image/*"
+                    multiple
                     className="hidden"
                     onChange={handleImageSelect}
                   />
@@ -775,7 +843,7 @@ export default function Messages() {
                     variant="ghost"
                     size="icon"
                     onClick={() => imageInputRef.current?.click()}
-                    disabled={sending}
+                    disabled={sending || imageFiles.length >= MAX_MESSAGE_IMAGES}
                     className="text-muted-foreground hover:text-foreground shrink-0"
                   >
                     <ImagePlus className="w-5 h-5" />
@@ -790,7 +858,7 @@ export default function Messages() {
                   <Button
                     onClick={handleSend}
                     size="icon"
-                    disabled={sending || uploadingImage || (!newMessage.trim() && !imageFile)}
+                    disabled={sending || uploadingImage || (!newMessage.trim() && imageFiles.length === 0)}
                     className="bg-accent hover:bg-accent/90 text-accent-foreground shrink-0"
                   >
                     {uploadingImage ? <div className="w-4 h-4 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin" /> : <Send className="w-4 h-4" />}
@@ -807,6 +875,7 @@ export default function Messages() {
               <p className="text-sm max-w-xs">Pick a chat on the left, or say hello to a seller from any listing to get started.</p>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
