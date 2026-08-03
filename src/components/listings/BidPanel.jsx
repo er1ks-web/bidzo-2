@@ -3,7 +3,7 @@ import { supabase } from '@/supabase';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Gavel, TrendingUp, AlertCircle } from 'lucide-react';
+import { Gavel, TrendingUp, AlertCircle, Zap, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { getMinIncrement, getMinNextBid, getMaxBid, validateBid } from '@/lib/bidRules';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,6 +21,20 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
   const [buyerTrust, setBuyerTrust] = useState(null);
   const [bidCheckMessage, setBidCheckMessage] = useState('');
   const [showSuccessSheet, setShowSuccessSheet] = useState(false);
+  const [myAutoBid, setMyAutoBid] = useState(null);
+  const [cancellingAutoBid, setCancellingAutoBid] = useState(false);
+
+  const loadMyAutoBid = async (authUserId) => {
+    const { data, error } = await supabase
+      .from('auto_bids')
+      .select('*')
+      .eq('listing_id', listing.id)
+      .eq('bidder_id', authUserId)
+      .limit(1)
+
+    if (error) console.log(error)
+    setMyAutoBid(Array.isArray(data) ? (data[0] || null) : null)
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -40,11 +54,29 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
         if (error) console.log(error)
         const record = Array.isArray(data) ? (data[0] || null) : null
         setBuyerTrust(record)
+
+        await loadMyAutoBid(authUser.id)
       } catch (e) {
         console.log(e)
       }
     })()
-  }, [user]);
+  }, [user, listing.id]);
+
+  const handleTurnOffAutoBid = async () => {
+    setCancellingAutoBid(true);
+    const { error } = await supabase.rpc('cancel_max_bid', { p_listing_id: listing.id })
+
+    if (error) {
+      console.log(error)
+      toast.error(error.message || 'Failed to turn off auto-bid')
+      setCancellingAutoBid(false);
+      return
+    }
+
+    setMyAutoBid(null);
+    toast.success('Auto-bid turned off');
+    setCancellingAutoBid(false);
+  };
 
   const currentBid = listing.current_bid ?? listing.price;
   const minNext = getMinNextBid(currentBid);
@@ -148,7 +180,8 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
         // Unlike an exact bid, a stronger competing max bid could immediately
         // out-cascade this one within the same call -- so we can't truthfully
         // claim "you're now the highest bidder" the way the success sheet does.
-        toast.success("Max bid set! We'll automatically bid for you up to that amount.");
+        toast.success("Top price set! We'll bid for you automatically.");
+        await loadMyAutoBid(authUser.id);
       } else {
         setShowSuccessSheet(true);
       }
@@ -217,6 +250,26 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
           <span className="font-semibold text-sm">Place a Bid</span>
         </div>
 
+      {myAutoBid && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <Zap className="w-4 h-4 text-accent shrink-0" />
+            <p className="text-xs text-foreground">
+              Auto-Bid is on. We'll bid for you up to <span className="font-bold">€{Number(myAutoBid.max_amount).toFixed(2)}</span>.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleTurnOffAutoBid}
+            disabled={cancellingAutoBid}
+            className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-destructive transition-colors shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+            {cancellingAutoBid ? 'Turning off...' : 'Turn off'}
+          </button>
+        </div>
+      )}
+
       {/* Mode toggle */}
       <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg text-xs font-medium">
         <button
@@ -224,20 +277,20 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
           onClick={() => { setBidMode('exact'); setValidationError(''); }}
           className={`py-1.5 rounded-md transition-colors ${bidMode === 'exact' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
         >
-          Exact bid
+          Bid once
         </button>
         <button
           type="button"
           onClick={() => { setBidMode('auto'); setValidationError(''); }}
           className={`py-1.5 rounded-md transition-colors ${bidMode === 'auto' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
         >
-          Bid up to (auto)
+          Auto-Bid
         </button>
       </div>
 
       {bidMode === 'auto' && (
         <p className="text-xs text-muted-foreground -mt-1">
-          Set the most you're willing to pay. We'll automatically bid the minimum needed to keep you winning, up to that amount — no need to watch the auction.
+          Enter the highest price you're willing to pay. We'll bid for you automatically, a little at a time, only as much as needed to stay in the lead. You will never pay more than this amount.
         </p>
       )}
 
@@ -305,8 +358,8 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
       >
         <Gavel className="w-4 h-4" />
         {isSubmitting
-          ? (bidMode === 'auto' ? 'Setting max bid...' : 'Placing bid...')
-          : (bidMode === 'auto' ? 'Set Max Bid' : 'Place Bid')}
+          ? (bidMode === 'auto' ? 'Turning on...' : 'Placing bid...')
+          : (bidMode === 'auto' ? 'Turn On Auto-Bid' : 'Place Bid')}
       </Button>
       </div>
 
