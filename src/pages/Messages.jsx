@@ -29,6 +29,14 @@ function isIdBasedConvId(convId) {
   return typeof convId === 'string' && convId.includes('_') && convId.split('_').every(isUuid);
 }
 
+// A message stays hidden from a user's own view once they've deleted their
+// side of the conversation -- the other person's copy is never touched.
+function isHiddenForMe(msg, myId) {
+  if (msg.sender_id === myId && msg.deleted_by_sender) return true;
+  if (msg.recipient_id === myId && msg.deleted_by_recipient) return true;
+  return false;
+}
+
 export default function Messages() {
   const { t } = useI18n();
   const params = new URLSearchParams(window.location.search);
@@ -107,10 +115,12 @@ export default function Messages() {
 
         if (msgError) console.log(msgError)
 
-        const all = dedup((Array.isArray(allRows) ? allRows : []).map(m => ({
-          ...m,
-          created_date: m.created_date || m.created_at,
-        })))
+        const all = dedup((Array.isArray(allRows) ? allRows : [])
+          .filter(m => !isHiddenForMe(m, u.id))
+          .map(m => ({
+            ...m,
+            created_date: m.created_date || m.created_at,
+          })))
 
         setMessages(all)
 
@@ -170,6 +180,10 @@ export default function Messages() {
     const upsertFromPayload = (row) => {
       if (!row) return
       if (row.sender_id !== u.id && row.recipient_id !== u.id) return
+      if (isHiddenForMe(row, u.id)) {
+        setMessages(prev => prev.filter(m => m.id !== row.id));
+        return
+      }
       const msg = { ...row, created_date: row.created_date || row.created_at }
       setMessages(prev => dedup(prev.some(m => m.id === msg.id) ? prev.map(m => m.id === msg.id ? msg : m) : [...prev, msg]));
       const otherId = msg.sender_id !== u.id ? msg.sender_id : msg.recipient_id
@@ -208,19 +222,28 @@ export default function Messages() {
   useEffect(() => {
     if (!activeConv || !userRef.current) return;
     const u = userRef.current
-    const toMarkIds = (Array.isArray(messages) ? messages : [])
+    const toMark = (Array.isArray(messages) ? messages : [])
       .filter(m => m.conversation_id === activeConv && m.recipient_id === u.id && !m.is_read)
-      .map(m => m.id)
 
-    if (toMarkIds.length) {
-      supabase
-        .from('messages')
-        .update({ is_read: true })
-        .in('id', toMarkIds)
-        .then(({ error }) => { if (error) console.log(error) })
-    }
+    // Bail out with no state update at all when there's nothing new to mark.
+    // Without this, setMessages below would run on every single render this
+    // effect causes (since it always returns a new array reference, even when
+    // nothing actually changed) -- which changes `messages`, which re-triggers
+    // this very effect via its dependency array, forever. That self-inflicted
+    // loop was almost certainly why live "Seen" updates weren't landing: the
+    // component was busy re-rendering in a tight loop instead of settling
+    // long enough for the real realtime update to be reflected.
+    if (toMark.length === 0) return;
 
-    setMessages(prev => prev.map(m => (m.conversation_id === activeConv && m.recipient_id === u.id) ? { ...m, is_read: true } : m));
+    const idSet = new Set(toMark.map(m => m.id))
+
+    supabase
+      .from('messages')
+      .update({ is_read: true })
+      .in('id', [...idSet])
+      .then(({ error }) => { if (error) console.log(error) })
+
+    setMessages(prev => prev.map(m => idSet.has(m.id) ? { ...m, is_read: true } : m));
   }, [activeConv, messages]);
 
   // Scroll to bottom
@@ -408,10 +431,9 @@ export default function Messages() {
   };
 
   const handleDeleteChat = async (convId) => {
-    const { error } = await supabase
-      .from('messages')
-      .delete()
-      .eq('conversation_id', convId)
+    // Only hides the conversation from this user's own view -- the other
+    // person's copy of these messages is never touched.
+    const { error } = await supabase.rpc('delete_conversation_for_me', { p_conversation_id: convId })
 
     if (error) {
       console.log(error)
@@ -519,7 +541,7 @@ export default function Messages() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will delete all messages with {displayName}. This cannot be undone.
+                            This removes the conversation from your inbox. {displayName} will still see their copy of it.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -577,7 +599,7 @@ export default function Messages() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will delete all messages with {activeRecipientDisplay}. This cannot be undone.
+                          This removes the conversation from your inbox. {activeRecipientDisplay} will still see their copy of it.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -617,7 +639,13 @@ export default function Messages() {
                 </Link>
               )}
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ overflowAnchor: 'none' }}>
+              <div
+                className="flex-1 overflow-y-auto p-4 space-y-3"
+                style={{
+                  overflowAnchor: 'none',
+                  backgroundImage: 'radial-gradient(circle at 50% 0%, hsl(var(--accent) / 0.06), transparent 55%)',
+                }}
+              >
                 {activeMessages.length === 0 && (
                   <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground gap-2 px-6">
                     <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-1">
@@ -632,12 +660,14 @@ export default function Messages() {
                   {activeMessages.map((msg, idx) => {
                     const isMine = msg.sender_id === user.id;
                     const isSystem = false;
-                    // "Seen" only shows under the very last thing you sent, and
-                    // only once the other person has actually read it -- same
-                    // convention as iMessage/WhatsApp, not on every message.
-                    const isLastMineRead = isMine && msg.is_read && !activeMessages
+                    // "Seen"/"Sent" only show under the very last thing you
+                    // sent -- same convention as iMessage/WhatsApp, not on
+                    // every message.
+                    const isLastMine = isMine && !activeMessages
                       .slice(idx + 1)
                       .some(m => m.sender_id === user.id);
+                    const isLastMineRead = isLastMine && msg.is_read;
+                    const isLastMineSent = isLastMine && !msg.is_read && !msg._optimistic;
                     return (
                       <motion.div
                         key={msg.id}
@@ -688,6 +718,9 @@ export default function Messages() {
                             </div>
                             {isLastMineRead && (
                               <span className="text-[10px] text-muted-foreground mt-1 mr-1">Seen</span>
+                            )}
+                            {isLastMineSent && (
+                              <span className="text-[10px] text-muted-foreground/70 mt-1 mr-1">Sent</span>
                             )}
                           </div>
                         )}
