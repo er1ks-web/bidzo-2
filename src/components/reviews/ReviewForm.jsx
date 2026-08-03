@@ -75,6 +75,7 @@ export default function ReviewForm({ transaction, currentUser, targetId, targetE
 
     // Upload images
     let uploadedUrls = [];
+    let failedImageCount = 0;
     for (const img of images) {
       try {
         const file = img.file
@@ -92,6 +93,7 @@ export default function ReviewForm({ transaction, currentUser, targetId, targetE
 
         if (uploadError) {
           console.log(uploadError)
+          failedImageCount += 1
           continue
         }
 
@@ -105,6 +107,7 @@ export default function ReviewForm({ transaction, currentUser, targetId, targetE
         }
       } catch (error) {
         console.log(error)
+        failedImageCount += 1
       }
     }
 
@@ -122,12 +125,24 @@ export default function ReviewForm({ transaction, currentUser, targetId, targetE
           images: uploadedUrls.length > 0 ? JSON.stringify(uploadedUrls) : null,
         })
 
-      if (error) console.log(error)
+      if (error) {
+        console.log(error)
+        toast.error('Failed to submit review. Please try again.')
+        setSubmitting(false);
+        return
+      }
     } catch (error) {
       console.log(error)
+      toast.error('Failed to submit review. Please try again.')
+      setSubmitting(false);
+      return
     }
 
-    toast.success('Review submitted!');
+    if (failedImageCount > 0) {
+      toast.success(`Review submitted (${failedImageCount} photo${failedImageCount > 1 ? 's' : ''} failed to upload)`);
+    } else {
+      toast.success('Review submitted!');
+    }
     onReviewSubmitted?.();
     setSubmitting(false);
   };

@@ -157,12 +157,17 @@ export default function EditProfileCard({ user, profile, lang, onProfileSaved })
     // Check username uniqueness (skip if unchanged)
     if (form.username !== profile?.username) {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('id')
-        .eq('username', form.username.trim())
+        .ilike('username', form.username.trim())
         .limit(1)
 
-      if (error) console.log(error)
+      if (error) {
+        console.log(error)
+        toast.error('Failed to check username availability. Please try again.')
+        setSaving(false);
+        return;
+      }
 
       const existingId = Array.isArray(data) ? data[0]?.id : null
       if (existingId && existingId !== user.id) {

@@ -94,9 +94,13 @@ export default function Favourites() {
       .delete()
       .eq('id', watch.id)
 
-    if (error) console.log(error)
-    toast.success('Removed from favourites');
-    await refetchWatches();
+    if (error) {
+      console.log(error)
+      toast.error('Failed to remove from favourites')
+    } else {
+      toast.success('Removed from favourites');
+      await refetchWatches();
+    }
     setRemovingId(null);
   };
 
@@ -108,7 +112,11 @@ export default function Favourites() {
       .update({ [field]: !watch[field] })
       .eq('id', watch.id)
 
-    if (error) console.log(error)
+    if (error) {
+      console.log(error)
+      toast.error('Failed to update notification setting')
+      return
+    }
     await refetchWatches();
   };
 

@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ENABLE_WALLET } from '@/lib/featureFlags';
 import { getWalletState } from '@/lib/wallet';
+import { toast } from 'sonner';
 
 export default function Profile() {
   const { t, lang } = useI18n();
@@ -545,7 +546,10 @@ export default function Profile() {
             size="sm"
             onClick={async () => {
               const { error } = await supabase.auth.signOut()
-              if (error) console.log(error)
+              if (error) {
+                console.log(error)
+                toast.error('Failed to log out. Please try again.')
+              }
             }}
             className="gap-2"
           >

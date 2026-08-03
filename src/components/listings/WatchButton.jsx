@@ -39,9 +39,13 @@ export default function WatchButton({ listingId, user, requireLogin, className, 
         .delete()
         .eq('id', watchRecord.id)
 
-      if (error) console.log(error)
-      setWatchRecord(null);
-      toast.success('Removed from watchlist');
+      if (error) {
+        console.log(error)
+        toast.error('Failed to remove from watchlist')
+      } else {
+        setWatchRecord(null);
+        toast.success('Removed from watchlist');
+      }
     } else {
       const { data, error } = await supabase
         .from('favorites')
@@ -56,9 +60,13 @@ export default function WatchButton({ listingId, user, requireLogin, className, 
         .select('*')
         .single()
 
-      if (error) console.log(error)
-      setWatchRecord(data || null);
-      toast.success('Added to watchlist — you\'ll get email updates!');
+      if (error) {
+        console.log(error)
+        toast.error('Failed to add to watchlist')
+      } else {
+        setWatchRecord(data || null);
+        toast.success('Added to watchlist — you\'ll get email updates!');
+      }
     }
     setLoading(false);
   };

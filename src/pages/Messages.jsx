@@ -305,6 +305,7 @@ export default function Messages() {
       } catch (e) {
         console.log(e)
         uploadedImageUrl = null
+        toast.error('Failed to attach image — sending message without it')
       }
       setUploadingImage(false);
     }
@@ -374,6 +375,7 @@ export default function Messages() {
     } catch (e) {
       console.log(e)
       setMessages(prev => prev.filter(m => m.id !== optimistic.id))
+      toast.error('Failed to send message. Please try again.')
     } finally {
       setSending(false);
     }
@@ -385,7 +387,11 @@ export default function Messages() {
       .delete()
       .eq('conversation_id', convId)
 
-    if (error) console.log(error)
+    if (error) {
+      console.log(error)
+      toast.error('Failed to delete conversation')
+      return
+    }
 
     setMessages(prev => prev.filter(m => m.conversation_id !== convId));
     if (activeConv === convId) {
