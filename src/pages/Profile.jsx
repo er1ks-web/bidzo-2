@@ -170,20 +170,9 @@ export default function Profile() {
       if (error) console.log(error)
 
       const rows = Array.isArray(data) ? data : []
-      const now = new Date()
-      const SOLD_STATUSES = new Set(['sold', 'sold_pending', 'in_progress', 'completed', 'cancelled'])
-      return rows
-        .filter(l => !l?.is_deleted)
-        .filter(l => {
-          const status = typeof l?.status === 'string' ? l.status : ''
-          const isCancelled = status === 'cancelled' || status === 'canceled' || status.includes('cancel')
-          // Hide expired auctions ONLY if they are not sold/completed.
-          if (!(l?.listing_type === 'auction' && l?.auction_end && new Date(l.auction_end) < now)) return true
-          if (l?.is_sold) return true
-          if (isCancelled) return true
-          if (SOLD_STATUSES.has(status)) return true
-          return false
-        })
+      // Expired (unsold, non-cancelled) auctions are kept here — the seller
+      // should still see their own expired listings, just not publicly.
+      return rows.filter(l => !l?.is_deleted)
     },
     enabled: !!user,
   });
@@ -621,14 +610,16 @@ export default function Profile() {
               <TabsContent value="listings" className="mt-6 space-y-4">
                {(() => {
                  const SOLD_STATUSES = new Set(['sold', 'sold_pending', 'in_progress', 'completed', 'cancelled']);
+                 const isExpired = (l) => l?.listing_type === 'auction' && l?.auction_end && new Date(l.auction_end) < new Date() && l?.status === 'active' && !l?.is_sold;
                  const sold = myListings.filter(l => {
                    const status = typeof l?.status === 'string' ? l.status : ''
                    const isCancelled = status === 'cancelled' || status === 'canceled' || status.includes('cancel')
                    return isCancelled || l?.is_sold || SOLD_STATUSES.has(status)
                  });
-                 const active = myListings.filter(l => l?.status === 'active' && !l?.is_sold);
+                 const expired = myListings.filter(isExpired);
+                 const active = myListings.filter(l => l?.status === 'active' && !l?.is_sold && !isExpired(l));
 
-                 if (sold.length === 0 && active.length === 0) {
+                 if (sold.length === 0 && active.length === 0 && expired.length === 0) {
                    return <div className="text-center py-12 text-muted-foreground">{t('common.noResults')}</div>;
                  }
 
@@ -659,6 +650,17 @@ export default function Profile() {
                          <h3 className="text-sm font-semibold text-muted-foreground mb-3">Active ({active.length})</h3>
                          <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
                            {active.map((listing, i) => (
+                             <ListingCard key={listing.id} listing={listing} index={i} />
+                           ))}
+                         </div>
+                       </div>
+                     )}
+
+                     {expired.length > 0 && (
+                       <div className={(sold.length > 0 || active.length > 0) ? 'mt-6' : ''}>
+                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">Expired ({expired.length})</h3>
+                         <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
+                           {expired.map((listing, i) => (
                              <ListingCard key={listing.id} listing={listing} index={i} />
                            ))}
                          </div>
@@ -797,14 +799,16 @@ export default function Profile() {
           <TabsContent value="listings" className="mt-6 space-y-4">
             {(() => {
               const SOLD_STATUSES = new Set(['sold', 'sold_pending', 'in_progress', 'completed', 'cancelled']);
+              const isExpired = (l) => l?.listing_type === 'auction' && l?.auction_end && new Date(l.auction_end) < new Date() && l?.status === 'active' && !l?.is_sold;
               const sold = myListings.filter(l => {
                 const status = typeof l?.status === 'string' ? l.status : ''
                 const isCancelled = status === 'cancelled' || status === 'canceled' || status.includes('cancel')
                 return isCancelled || l?.is_sold || SOLD_STATUSES.has(status)
               });
-              const active = myListings.filter(l => l?.status === 'active' && !l?.is_sold);
+              const expired = myListings.filter(isExpired);
+              const active = myListings.filter(l => l?.status === 'active' && !l?.is_sold && !isExpired(l));
 
-              if (sold.length === 0 && active.length === 0) {
+              if (sold.length === 0 && active.length === 0 && expired.length === 0) {
                 return <div className="text-center py-12 text-muted-foreground">{t('common.noResults')}</div>;
               }
 
@@ -835,6 +839,17 @@ export default function Profile() {
                       <h3 className="text-sm font-semibold text-muted-foreground mb-3">Active ({active.length})</h3>
                       <div className="grid grid-cols-2 gap-4">
                         {active.map((listing, i) => (
+                          <ListingCard key={listing.id} listing={listing} index={i} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {expired.length > 0 && (
+                    <div className={(sold.length > 0 || active.length > 0) ? 'mt-6' : ''}>
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">Expired ({expired.length})</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {expired.map((listing, i) => (
                           <ListingCard key={listing.id} listing={listing} index={i} />
                         ))}
                       </div>

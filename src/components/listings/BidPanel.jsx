@@ -13,6 +13,7 @@ import BidSuccessSheet from './BidSuccessSheet';
 
 export default function BidPanel({ listing, user, onBidPlaced }) {
   const { requireLogin } = useAuth();
+  const [bidMode, setBidMode] = useState('exact'); // 'exact' | 'auto'
   const [bidAmount, setBidAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
@@ -123,10 +124,15 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
     setValidationError('');
 
     try {
-      const { error: rpcError } = await supabase.rpc('place_bid', {
-        p_listing_id: listing.id,
-        p_amount: amount,
-      })
+      const { error: rpcError } = bidMode === 'auto'
+        ? await supabase.rpc('set_max_bid', {
+            p_listing_id: listing.id,
+            p_max_amount: amount,
+          })
+        : await supabase.rpc('place_bid', {
+            p_listing_id: listing.id,
+            p_amount: amount,
+          })
 
       if (rpcError) {
         console.log(rpcError);
@@ -138,7 +144,14 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
 
       setBidAmount('');
       setIsSubmitting(false);
-      setShowSuccessSheet(true);
+      if (bidMode === 'auto') {
+        // Unlike an exact bid, a stronger competing max bid could immediately
+        // out-cascade this one within the same call -- so we can't truthfully
+        // claim "you're now the highest bidder" the way the success sheet does.
+        toast.success("Max bid set! We'll automatically bid for you up to that amount.");
+      } else {
+        setShowSuccessSheet(true);
+      }
       onBidPlaced?.();
     } catch (err) {
       console.log(err);
@@ -204,6 +217,30 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
           <span className="font-semibold text-sm">Place a Bid</span>
         </div>
 
+      {/* Mode toggle */}
+      <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg text-xs font-medium">
+        <button
+          type="button"
+          onClick={() => { setBidMode('exact'); setValidationError(''); }}
+          className={`py-1.5 rounded-md transition-colors ${bidMode === 'exact' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
+        >
+          Exact bid
+        </button>
+        <button
+          type="button"
+          onClick={() => { setBidMode('auto'); setValidationError(''); }}
+          className={`py-1.5 rounded-md transition-colors ${bidMode === 'auto' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
+        >
+          Bid up to (auto)
+        </button>
+      </div>
+
+      {bidMode === 'auto' && (
+        <p className="text-xs text-muted-foreground -mt-1">
+          Set the most you're willing to pay. We'll automatically bid the minimum needed to keep you winning, up to that amount — no need to watch the auction.
+        </p>
+      )}
+
       {/* Info row */}
       <div className="grid grid-cols-2 gap-3 text-xs">
         <div className="bg-muted rounded-lg p-2.5">
@@ -232,17 +269,19 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
       </div>
 
       {/* Quick-bid button */}
-      <button
-        type="button"
-        onClick={() => {
-          setBidAmount(minNext.toFixed(2));
-          setValidationError('');
-        }}
-        className="text-xs text-accent hover:underline flex items-center gap-1"
-      >
-        <TrendingUp className="w-3 h-3" />
-        Use minimum bid (€{minNext.toFixed(2)})
-      </button>
+      {bidMode === 'exact' && (
+        <button
+          type="button"
+          onClick={() => {
+            setBidAmount(minNext.toFixed(2));
+            setValidationError('');
+          }}
+          className="text-xs text-accent hover:underline flex items-center gap-1"
+        >
+          <TrendingUp className="w-3 h-3" />
+          Use minimum bid (€{minNext.toFixed(2)})
+        </button>
+      )}
 
       {/* Validation error */}
       <AnimatePresence>
@@ -265,7 +304,9 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
         className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-semibold gap-2"
       >
         <Gavel className="w-4 h-4" />
-        {isSubmitting ? 'Placing bid...' : 'Place Bid'}
+        {isSubmitting
+          ? (bidMode === 'auto' ? 'Setting max bid...' : 'Placing bid...')
+          : (bidMode === 'auto' ? 'Set Max Bid' : 'Place Bid')}
       </Button>
       </div>
 

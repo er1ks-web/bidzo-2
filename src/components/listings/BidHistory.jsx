@@ -59,6 +59,7 @@ export default function BidHistory({ bids, currentUserEmail, currentUserId }) {
                   <p className={`font-medium text-sm ${isUserLatest ? 'text-accent' : ''}`}>
                     {bid.bidder_name || (bid.bidder_id ? `User ${String(bid.bidder_id).slice(0, 6)}` : 'Anonymous')}
                     {isUserLatest && <span className="ml-2 text-[10px] font-semibold bg-accent/20 text-accent px-1.5 py-0.5 rounded-full">You</span>}
+                    {bid.is_auto && <span className="ml-2 text-[10px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">Auto</span>}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {hasValidDate ? format(dateObj, 'MMM d, HH:mm') : ''}

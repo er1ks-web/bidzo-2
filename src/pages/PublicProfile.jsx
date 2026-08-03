@@ -176,7 +176,7 @@ export default function PublicProfile() {
   const displayName =
     profile?.username ||
     'User';
-  const memberSince = null;
+  const memberSince = profile?.created_at ? format(new Date(profile.created_at), 'MMMM yyyy') : null;
   const avgRating = reviews.length
     ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
     : null;
