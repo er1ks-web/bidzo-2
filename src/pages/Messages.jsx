@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
+import FullscreenImageViewer from '@/components/listings/FullscreenImageViewer';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -56,6 +57,15 @@ export default function Messages() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const MAX_MESSAGE_IMAGES = 5;
   const imageInputRef = useRef(null);
+  const [viewerImages, setViewerImages] = useState([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  const openImageViewer = (images, index) => {
+    setViewerImages(images);
+    setViewerIndex(index);
+    setViewerOpen(true);
+  };
   // Map user_id -> { email, username, avatar } from profiles
   const [profileMap, setProfileMap] = useState({});
   const isMobile = useIsMobile();
@@ -489,7 +499,9 @@ export default function Messages() {
   const activeRecipientEmail = activeRecipientProfile?.email || recipientEmail
 
   return (
-    <div style={{ backgroundImage: 'radial-gradient(ellipse 900px 420px at 50% 0%, hsl(var(--accent) / 0.05), transparent 70%)' }}>
+    <div style={{
+      backgroundImage: 'radial-gradient(ellipse 1100px 600px at 50% -10%, hsl(var(--accent) / 0.12), transparent 65%), radial-gradient(ellipse 700px 500px at 100% 100%, hsl(var(--accent) / 0.07), transparent 60%)',
+    }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
         <h1 className="text-2xl font-display font-bold mb-6">{t('messages.title')}</h1>
 
@@ -504,10 +516,7 @@ export default function Messages() {
           <div className="p-3 border-b">
             <p className="text-sm font-medium text-muted-foreground">{convList.length} conversations</p>
           </div>
-          <div
-            className="flex-1 overflow-y-auto"
-            style={{ backgroundImage: 'radial-gradient(circle at 50% 0%, hsl(var(--accent) / 0.06), transparent 55%)' }}
-          >
+          <div className="flex-1 overflow-y-auto">
             {convList.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground text-sm">
                 {t('messages.noMessages')}
@@ -744,7 +753,8 @@ export default function Messages() {
                                     <img
                                       src={imgs[0]}
                                       alt="attachment"
-                                      className="max-w-full max-h-60 object-cover w-full"
+                                      onClick={() => openImageViewer(imgs, 0)}
+                                      className="max-w-full max-h-60 object-cover w-full cursor-pointer hover:opacity-90 transition-opacity"
                                     />
                                   );
                                 }
@@ -755,7 +765,8 @@ export default function Messages() {
                                         key={i}
                                         src={url}
                                         alt={`attachment ${i + 1}`}
-                                        className="w-full h-28 object-cover"
+                                        onClick={() => openImageViewer(imgs, i)}
+                                        className="w-full h-28 object-cover cursor-pointer hover:opacity-90 transition-opacity"
                                       />
                                     ))}
                                   </div>
@@ -878,6 +889,13 @@ export default function Messages() {
         </div>
         </div>
       </div>
+
+      <FullscreenImageViewer
+        images={viewerImages}
+        initialIndex={viewerIndex}
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+      />
     </div>
   );
 }
