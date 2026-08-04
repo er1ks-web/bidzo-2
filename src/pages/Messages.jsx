@@ -504,7 +504,7 @@ export default function Messages() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
         <h1 className="text-2xl font-display font-bold mb-6">{t('messages.title')}</h1>
 
-        <div className="bg-card/70 backdrop-blur-md border border-border/60 shadow-xl shadow-black/20 rounded-xl overflow-hidden h-[70vh] flex">
+        <div className="bg-card/40 backdrop-blur-md border border-border/60 shadow-xl shadow-black/20 rounded-xl overflow-hidden h-[70vh] flex">
         {/* Conversation list */}
         <div className={cn(
           "w-full sm:w-80 border-r flex flex-col",
