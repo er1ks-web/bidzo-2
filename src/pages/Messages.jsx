@@ -500,7 +500,12 @@ export default function Messages() {
 
   return (
     <div style={{
-      backgroundImage: 'radial-gradient(ellipse 1100px 600px at 50% -10%, hsl(var(--accent) / 0.12), transparent 65%), radial-gradient(ellipse 700px 500px at 100% 100%, hsl(var(--accent) / 0.07), transparent 60%)',
+      backgroundImage: [
+        'radial-gradient(circle at 0% 0%, hsl(var(--accent) / 0.05), transparent 40%)',
+        'radial-gradient(circle at 100% 100%, hsl(var(--accent) / 0.04), transparent 40%)',
+        'radial-gradient(hsl(var(--foreground) / 0.035) 1px, transparent 1px)',
+      ].join(', '),
+      backgroundSize: '100% 100%, 100% 100%, 22px 22px',
     }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
         <h1 className="text-2xl font-display font-bold mb-6">{t('messages.title')}</h1>
