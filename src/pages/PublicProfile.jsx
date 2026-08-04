@@ -8,6 +8,7 @@ import ReviewList from '@/components/reviews/ReviewList';
 import StarRatingDisplay from '@/components/reviews/StarRatingDisplay';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
+import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 
 export default function PublicProfile() {
   const { t } = useI18n();
@@ -182,6 +183,7 @@ export default function PublicProfile() {
     : null;
 
   return (
+    <div className={pageBackgroundClassName} style={pageBackgroundStyle}>
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
       <Link
         to="/browse"
@@ -321,6 +323,7 @@ export default function PublicProfile() {
           )}
         </div>
       )}
+    </div>
     </div>
   );
 }

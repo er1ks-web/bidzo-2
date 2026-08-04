@@ -8,6 +8,7 @@ import { useI18n } from '@/lib/i18n.jsx';
 import TransactionCard from '@/components/transactions/TransactionCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import MarkShippedModal from '@/components/transactions/MarkShippedModal';
+import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 
 export default function Transactions() {
   const { t } = useI18n();
@@ -412,6 +413,7 @@ export default function Transactions() {
   const isLoading = loadingBuyer || loadingSeller;
 
   return (
+    <div className={pageBackgroundClassName} style={pageBackgroundStyle}>
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
@@ -544,6 +546,7 @@ export default function Transactions() {
           )}
         </TabsContent>
       </Tabs>
+    </div>
     </div>
   );
 }

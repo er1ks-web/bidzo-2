@@ -9,6 +9,7 @@ import AuctionTimer from '@/components/listings/AuctionTimer';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '@/lib/i18n.jsx';
+import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 
 const LOCATION_NAMES = {
   riga: 'Rīga', daugavpils: 'Daugavpils', liepaja: 'Liepāja',
@@ -130,6 +131,7 @@ export default function Favourites() {
   }
 
   return (
+    <div className={pageBackgroundClassName} style={pageBackgroundStyle}>
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
       <div className="flex items-center gap-2 mb-8">
         <Heart className="w-6 h-6 text-red-500 fill-red-500" />
@@ -231,6 +233,7 @@ export default function Favourites() {
           </AnimatePresence>
         </div>
       )}
+    </div>
     </div>
   );
 }

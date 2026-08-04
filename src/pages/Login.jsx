@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 
 export default function Login() {
   const { t } = useI18n();
@@ -105,6 +106,7 @@ export default function Login() {
   };
 
   return (
+    <div className={pageBackgroundClassName} style={pageBackgroundStyle}>
     <div className="max-w-md mx-auto px-4 sm:px-6 py-10">
       <div className="bg-card border rounded-xl p-6">
         <h1 className="text-2xl font-display font-bold mb-1">{mode === 'signup' ? (t('profile.signup') || 'Sign up') : (t('profile.login') || 'Login')}</h1>
@@ -199,6 +201,7 @@ export default function Login() {
           </Button>
         </form>
       </div>
+    </div>
     </div>
   );
 }

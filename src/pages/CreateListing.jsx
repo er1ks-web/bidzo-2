@@ -16,6 +16,7 @@ import ImageUploader from '@/components/listings/ImageUploader';
 import { cn } from '@/lib/utils';
 import { ENABLE_WALLET } from '@/lib/featureFlags';
 import { CATEGORIES, SUBCATEGORIES, getActiveFilterKeys } from '@/lib/categories';
+import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 
 const CONDITIONS = ['new', 'like_new', 'good', 'fair', 'poor'];
 const LOCATIONS = ['riga', 'daugavpils', 'liepaja', 'jelgava', 'jurmala', 'ventspils', 'rezekne', 'valmiera', 'jekabpils', 'ogre', 'tukums', 'cesis', 'other'];
@@ -247,6 +248,7 @@ export default function CreateListing() {
   };
 
   return (
+    <div className={pageBackgroundClassName} style={pageBackgroundStyle}>
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
       <h1 className="text-2xl font-display font-bold mb-8">{t('create.title')}</h1>
 
@@ -634,6 +636,7 @@ export default function CreateListing() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

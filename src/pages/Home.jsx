@@ -7,6 +7,7 @@ import ListingSection from '@/components/home/ListingSection';
 import EndingSoonSection from '@/components/home/EndingSoonSection';
 import EuroStartSection from '@/components/home/EuroStartSection';
 import { Skeleton } from '@/components/ui/skeleton';
+import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 
 export default function Home() {
   const { t } = useI18n();
@@ -93,7 +94,7 @@ export default function Home() {
   }
 
   return (
-    <div>
+    <div className={pageBackgroundClassName} style={pageBackgroundStyle}>
       <HeroSection liveListings={activeListings} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-10">

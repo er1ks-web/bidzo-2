@@ -17,6 +17,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ENABLE_WALLET } from '@/lib/featureFlags';
 import { getWalletState } from '@/lib/wallet';
 import { toast } from 'sonner';
+import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 
 export default function Profile() {
   const { t, lang } = useI18n();
@@ -479,6 +480,7 @@ export default function Profile() {
 
 
   return (
+    <div className={pageBackgroundClassName} style={pageBackgroundStyle}>
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
       {ReviewImageLightbox}
       {/* Profile header */}
@@ -949,6 +951,7 @@ export default function Profile() {
           onSuccess={refreshWallet}
         />
       )}
+    </div>
     </div>
   );
 }

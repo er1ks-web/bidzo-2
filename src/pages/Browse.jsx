@@ -13,6 +13,7 @@ import ListingCard from '@/components/listings/ListingCard';
 import CategoryGrid from '@/components/listings/CategoryGrid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CATEGORIES, SUBCATEGORIES, FILTERS, getActiveFilterKeys, normalizeCategory, normalizeTextKey } from '@/lib/categories';
+import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 
 const LOCATIONS = ['riga', 'daugavpils', 'liepaja', 'jelgava', 'jurmala', 'ventspils', 'rezekne', 'valmiera', 'jekabpils', 'ogre', 'tukums', 'cesis', 'other'];
 
@@ -272,14 +273,7 @@ export default function Browse() {
   ]);
 
   return (
-    <div style={{
-      backgroundImage: [
-        'radial-gradient(circle at 0% 0%, hsl(var(--accent) / 0.05), transparent 40%)',
-        'radial-gradient(circle at 100% 100%, hsl(var(--accent) / 0.04), transparent 40%)',
-        'radial-gradient(hsl(var(--foreground) / 0.035) 1px, transparent 1px)',
-      ].join(', '),
-      backgroundSize: '100% 100%, 100% 100%, 22px 22px',
-    }}>
+    <div className={pageBackgroundClassName} style={pageBackgroundStyle}>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
       {/* Categories */}
        <div className="mb-8">
