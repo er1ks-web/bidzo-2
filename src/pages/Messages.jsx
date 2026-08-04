@@ -738,7 +738,7 @@ export default function Messages() {
                             <div className={cn(
                               "rounded-2xl text-sm overflow-hidden",
                               isMine
-                                ? "bg-primary text-primary-foreground rounded-br-sm"
+                                ? "bg-accent/15 border border-accent/30 text-foreground rounded-br-sm"
                                 : "bg-muted rounded-bl-sm",
                               msg._optimistic && "opacity-60"
                             )}>
@@ -773,10 +773,7 @@ export default function Messages() {
                               })()}
                               <div className="px-4 py-2.5">
                                 {msg.content && <p>{msg.content}</p>}
-                                <p className={cn(
-                                  "text-[10px] mt-1",
-                                  isMine ? "text-primary-foreground/60" : "text-muted-foreground"
-                                )}>
+                                <p className="text-[10px] mt-1 text-muted-foreground">
                                   {format(new Date(msg.created_date), 'HH:mm')}
                                 </p>
                               </div>
