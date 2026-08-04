@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Star, Calendar, LogOut, Package, Gavel, Wallet as WalletIcon, Settings, AlertCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, Star, Calendar, LogOut, Package, Gavel, Wallet as WalletIcon, Settings, Palette, AlertCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import ListingCard from '@/components/listings/ListingCard';
 import AuctionTimer from '@/components/listings/AuctionTimer';
 import WalletCard from '@/components/wallet/WalletCard';
@@ -531,6 +531,17 @@ export default function Profile() {
             <Settings className="w-4 h-4" />
             Edit
           </Button>
+
+          <Link to="/settings">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <Palette className="w-4 h-4" />
+              Settings
+            </Button>
+          </Link>
 
           <Button
             variant="outline"

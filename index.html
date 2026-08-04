@@ -6,6 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.json" />
     <title>Bidzo — Latvijas izsoles platforma</title>
+    <script>
+      // Applies the saved theme before first paint, so there's never a flash
+      // of the wrong theme while React loads. Defaults to dark (the site's
+      // original look) if the user has never chosen anything.
+      (function () {
+        try {
+          var t = localStorage.getItem('bidzo-theme') || 'dark';
+          var isDark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

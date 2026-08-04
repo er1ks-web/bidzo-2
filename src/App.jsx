@@ -6,6 +6,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { I18nProvider } from '@/lib/i18n.jsx';
+import { ThemeProvider } from '@/lib/ThemeContext.jsx';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -27,6 +28,7 @@ import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
 import AuthCallback from '@/pages/AuthCallback';
 import ResetPassword from '@/pages/ResetPassword';
+import Settings from '@/pages/Settings';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 
 const AuthenticatedApp = () => {
@@ -64,6 +66,7 @@ const AuthenticatedApp = () => {
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/ending-soon" element={<EndingSoon />} />
+        <Route path="/settings" element={<Settings />} />
 
         {/* Protected pages — auth required */}
         <Route path="/create" element={<ProtectedRoute><CreateListing /></ProtectedRoute>} />
@@ -80,28 +83,30 @@ const AuthenticatedApp = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <I18nProvider>
-          <Router>
-            <AuthenticatedApp />
-          </Router>
-          <Toaster
-            richColors
-            position="bottom-center"
-            toastOptions={{
-              classNames: {
-                toast:
-                  '!bg-black border border-white/10 shadow-lg data-[type=success]:!bg-black data-[type=error]:!bg-black data-[type=success]:!border-emerald-500 data-[type=success]:border-2 data-[type=success]:!text-emerald-400 data-[type=success]:[&_*]:!text-emerald-400 !text-white',
-                description: 'text-white/70 data-[type=success]:!text-emerald-300',
-                actionButton: 'bg-emerald-600 text-white',
-                cancelButton: 'bg-white/10 text-white',
-              },
-            }}
-          />
-        </I18nProvider>
-      </QueryClientProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <I18nProvider>
+            <Router>
+              <AuthenticatedApp />
+            </Router>
+            <Toaster
+              richColors
+              position="bottom-center"
+              toastOptions={{
+                classNames: {
+                  toast:
+                    '!bg-black border border-white/10 shadow-lg data-[type=success]:!bg-black data-[type=error]:!bg-black data-[type=success]:!border-emerald-500 data-[type=success]:border-2 data-[type=success]:!text-emerald-400 data-[type=success]:[&_*]:!text-emerald-400 !text-white',
+                  description: 'text-white/70 data-[type=success]:!text-emerald-300',
+                  actionButton: 'bg-emerald-600 text-white',
+                  cancelButton: 'bg-white/10 text-white',
+                },
+              }}
+            />
+          </I18nProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 
