@@ -8,13 +8,13 @@
     <title>Bidzo — Latvijas izsoles platforma</title>
     <script>
       // Applies the saved theme before first paint, so there's never a flash
-      // of the wrong theme while React loads. Defaults to dark (the site's
-      // original look) if the user has never chosen anything.
+      // of the wrong theme while React loads. Light mode is temporarily
+      // disabled site-wide (see LIGHT_MODE_ENABLED in ThemeContext.jsx), so
+      // this always applies dark for now regardless of any earlier choice
+      // saved in localStorage -- keep this in sync with that flag.
       (function () {
         try {
-          var t = localStorage.getItem('bidzo-theme') || 'dark';
-          var isDark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          if (isDark) document.documentElement.classList.add('dark');
+          document.documentElement.classList.add('dark');
         } catch (e) {}
       })();
     </script>

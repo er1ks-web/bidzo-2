@@ -28,7 +28,7 @@ import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
 import AuthCallback from '@/pages/AuthCallback';
 import ResetPassword from '@/pages/ResetPassword';
-import Settings from '@/pages/Settings';
+// import Settings from '@/pages/Settings'; -- re-import when re-enabling light mode
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 
 const AuthenticatedApp = () => {
@@ -66,7 +66,10 @@ const AuthenticatedApp = () => {
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/ending-soon" element={<EndingSoon />} />
-        <Route path="/settings" element={<Settings />} />
+        {/* /settings route intentionally not mounted -- light mode is
+            disabled for now (see LIGHT_MODE_ENABLED in ThemeContext.jsx).
+            Re-add `<Route path="/settings" element={<Settings />} />` here
+            when re-enabling it. */}
 
         {/* Protected pages — auth required */}
         <Route path="/create" element={<ProtectedRoute><CreateListing /></ProtectedRoute>} />

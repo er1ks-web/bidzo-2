@@ -11,8 +11,15 @@ export const pageBackgroundStyle = {
   backgroundSize: '100% 100%, 100% 100%, 22px 22px',
 };
 
-// Pair with className="min-h-full" on the wrapper -- without an explicit
-// height, a plain block div only stretches to fit its own content, so on a
-// short page the gradient would only cover a small strip at the top instead
-// of the whole visible page.
-export const pageBackgroundClassName = 'min-h-full';
+// Pair with this className on the wrapper -- without an explicit height, a
+// plain block div only stretches to fit its own content, so on a short page
+// the gradient would only cover part of the page, leaving a visible seam
+// where it cuts off before the actual bottom of the viewport.
+//
+// min-h-full was tried first but depends on every ancestor in the chain
+// (including the flex-1 <main> from AppLayout) resolving to a real height
+// for percentage-height to work, and that wasn't holding up reliably in
+// practice -- hence the visible seams. min-h-screen (100vh) doesn't depend
+// on any ancestor at all, so it's guaranteed to cover the full viewport
+// regardless of layout structure.
+export const pageBackgroundClassName = 'min-h-screen';
