@@ -272,6 +272,14 @@ export default function Browse() {
   ]);
 
   return (
+    <div style={{
+      backgroundImage: [
+        'radial-gradient(circle at 0% 0%, hsl(var(--accent) / 0.05), transparent 40%)',
+        'radial-gradient(circle at 100% 100%, hsl(var(--accent) / 0.04), transparent 40%)',
+        'radial-gradient(hsl(var(--foreground) / 0.035) 1px, transparent 1px)',
+      ].join(', '),
+      backgroundSize: '100% 100%, 100% 100%, 22px 22px',
+    }}>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
       {/* Categories */}
        <div className="mb-8">
@@ -476,6 +484,7 @@ export default function Browse() {
           </div>
         </>
       )}
+    </div>
     </div>
   );
 }
