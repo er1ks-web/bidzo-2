@@ -313,7 +313,7 @@ export default function Browse() {
 
       {/* Filters */}
       {showFilters && (
-        <div className="flex flex-wrap gap-3 mb-6 p-4 bg-card rounded-xl border">
+        <div className="flex flex-wrap gap-3 mb-6 p-4 bg-card/40 backdrop-blur-md border border-border/60 shadow-lg shadow-black/20 rounded-xl">
           <Select value={category} onValueChange={setCategory}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder={t('create.category')} />

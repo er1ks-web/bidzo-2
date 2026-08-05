@@ -331,7 +331,7 @@ export default function Navbar() {
   }, [isAuthenticated, user?.id]);
 
   return (
-    <nav className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
+    <nav className="sticky top-0 z-50 bg-card/40 backdrop-blur-xl border-b border-border/60 shadow-lg shadow-black/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}

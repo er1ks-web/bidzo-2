@@ -50,7 +50,7 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
       transition={{ delay: index * 0.05 }}
     >
       <Link to={`/listing/${listing.id}`} className="group block">
-        <div className="bg-card rounded-xl overflow-hidden border border-border/50 hover:border-accent/50 hover:shadow-lg transition-all duration-300">
+        <div className="bg-card/40 backdrop-blur-md rounded-xl overflow-hidden border border-border/60 shadow-lg shadow-black/20 hover:border-accent/50 hover:shadow-lg transition-all duration-300">
           {/* Image */}
           <div className="relative aspect-[4/3] overflow-hidden bg-muted">
             <img

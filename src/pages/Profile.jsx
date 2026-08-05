@@ -484,7 +484,7 @@ export default function Profile() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
       {ReviewImageLightbox}
       {/* Profile header */}
-      <div className="bg-card rounded-xl border p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8">
+      <div className="bg-card/40 backdrop-blur-md border border-border/60 shadow-xl shadow-black/20 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8">
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border-2 border-border">
           {avatarUrl ? (
             <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
@@ -528,8 +528,20 @@ export default function Profile() {
             onClick={() => setActiveTab('edit')}
             className="gap-2"
           >
-            <Settings className="w-4 h-4" />
-            Edit
+            <User className="w-4 h-4" />
+            Edit Profile
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+            className="gap-2"
+          >
+            <Link to="/settings">
+              <Settings className="w-4 h-4" />
+              Settings
+            </Link>
           </Button>
 
           <Button
@@ -680,7 +692,7 @@ export default function Profile() {
                   <div className="space-y-3">
                     {myBids.map(bid => (
                       <Link key={bid.id} to={`/listing/${bid.listing_id}`} className="block group">
-                        <div className="bg-card rounded-lg border p-4 flex items-center justify-between group-hover:border-accent group-hover:shadow-md transition-all duration-200">
+                        <div className="bg-card/40 backdrop-blur-md border border-border/60 shadow-lg shadow-black/20 rounded-lg p-4 flex items-center justify-between group-hover:border-accent group-hover:shadow-md transition-all duration-200">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div className="w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0">
                               <img src={bid.imageUrl} alt={bid?.listing?.title || 'Listing'} className="w-full h-full object-cover" />
@@ -726,7 +738,7 @@ export default function Profile() {
                 ) : (
                   <div className="space-y-3">
                     {reviews.map(review => (
-                      <div key={review.id} className="bg-card rounded-lg border p-4">
+                      <div key={review.id} className="bg-card/40 backdrop-blur-md border border-border/60 shadow-lg shadow-black/20 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="flex">
                             {[1,2,3,4,5].map(s => (
@@ -869,7 +881,7 @@ export default function Profile() {
               <div className="space-y-3">
                 {myBids.map(bid => (
                   <Link key={bid.id} to={`/listing/${bid.listing_id}`} className="block group">
-                    <div className="bg-card rounded-lg border p-4 flex items-center justify-between group-hover:border-accent group-hover:shadow-md transition-all duration-200">
+                    <div className="bg-card/40 backdrop-blur-md border border-border/60 shadow-lg shadow-black/20 rounded-lg p-4 flex items-center justify-between group-hover:border-accent group-hover:shadow-md transition-all duration-200">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0">
                           <img src={bid.imageUrl} alt={bid?.listing?.title || 'Listing'} className="w-full h-full object-cover" />
@@ -915,7 +927,7 @@ export default function Profile() {
             ) : (
               <div className="space-y-3">
                 {reviews.map(review => (
-                  <div key={review.id} className="bg-card rounded-lg border p-4">
+                  <div key={review.id} className="bg-card/40 backdrop-blur-md border border-border/60 shadow-lg shadow-black/20 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="flex">
                         {[1,2,3,4,5].map(s => (

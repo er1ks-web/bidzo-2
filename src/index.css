@@ -98,3 +98,26 @@
     @apply bg-background text-foreground font-sans;
   }
 }
+
+@layer utilities {
+  /* Cursor-following "dots grow near the mouse" effect, paired with the
+     ambient dot-grid background in lib/pageBackground.js. A second,
+     brighter copy of the same dot grid sits on ::before (so it's
+     guaranteed to align with the base dots -- same box, same
+     background-size/position) and is revealed only inside a soft
+     circular mask centered on the cursor. CursorDotGlow.jsx drives
+     --glow-x/--glow-y/--glow-opacity on this element. */
+  .page-ambient-bg {
+    position: relative;
+  }
+  .page-ambient-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(hsl(var(--foreground) / 0.5) 1.5px, transparent 1.5px);
+    background-size: 22px 22px;
+    -webkit-mask-image: radial-gradient(140px circle at var(--glow-x, -9999px) var(--glow-y, -9999px), black, transparent 70%);
+    mask-image: radial-gradient(140px circle at var(--glow-x, -9999px) var(--glow-y, -9999px), black, transparent 70%);
+  }
+}

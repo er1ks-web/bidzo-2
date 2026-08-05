@@ -16,10 +16,10 @@ export default function CategoryGrid({ selectedCategory }) {
             key={cat}
             to={`/browse?category=${cat}`}
             className={cn(
-              'border p-4 rounded-xl flex flex-col items-center gap-2 transition-colors',
+              'border p-4 rounded-xl flex flex-col items-center gap-2 transition-colors backdrop-blur-md shadow-lg shadow-black/20',
               isActive
-                ? 'bg-card text-accent border-accent'
-                : 'bg-card border-border text-foreground hover:border-accent/50 hover:text-accent'
+                ? 'bg-card/40 text-accent border-accent'
+                : 'bg-card/40 border-border/60 text-foreground hover:border-accent/50 hover:text-accent'
             )}
           >
             <Icon className="w-7 h-7" />

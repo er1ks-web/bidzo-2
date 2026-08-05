@@ -117,7 +117,7 @@ export default function TransactionCard({
   };
 
   return (
-    <div className="bg-card rounded-xl border overflow-hidden">
+    <div className="bg-card/40 backdrop-blur-md border border-border/60 shadow-xl shadow-black/20 rounded-xl overflow-hidden">
       <div className="flex gap-4 p-4">
         {/* Image */}
         {transaction.listing_image ? (

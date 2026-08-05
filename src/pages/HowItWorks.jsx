@@ -73,7 +73,7 @@ export default function HowItWorks() {
         <div className="space-y-6">
           <div>
             <h3 className="font-semibold mb-2">Is there a fee to list?</h3>
-            <p className="text-muted-foreground">New users get 3 free listings per month. After that, listings cost a small fee. Successful sales include a commission.</p>
+            <p className="text-muted-foreground">No. Listing on Bidzo is completely free, with no commission on sales either.</p>
           </div>
           <div>
             <h3 className="font-semibold mb-2">How do I know if a seller is trustworthy?</h3>

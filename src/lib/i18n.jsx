@@ -18,6 +18,20 @@ const translations = {
       cta: 'Sākt pārdošanu',
       browse: 'Pārlūkot izsoles',
       liveBadge: 'Aktīvas izsoles',
+      valueProps: [
+        {
+          title: 'Pilnīgi bez maksas',
+          desc: 'Bez sludinājumu maksas, bez komisijas — vienmēr',
+        },
+        {
+          title: 'Tikai reālas atsauksmes',
+          desc: 'Atsauksmes tikai pēc pabeigta darījuma, ne agrāk',
+        },
+        {
+          title: 'Tūlītēji paziņojumi',
+          desc: 'E-pasts brīdī, kad esat pārsolīts vai darījums mainās',
+        },
+      ],
     },
     listing: {
       auction: 'Izsole',
@@ -363,6 +377,20 @@ const translations = {
       cta: 'Start Selling',
       browse: 'Browse Auctions',
       liveBadge: 'Live Auctions',
+      valueProps: [
+        {
+          title: 'Completely free',
+          desc: 'No listing fees, no commission — ever',
+        },
+        {
+          title: 'Real reviews only',
+          desc: 'Reviews only unlock after a completed deal, never before',
+        },
+        {
+          title: 'Instant deal alerts',
+          desc: "Emailed the moment you're outbid or your deal updates",
+        },
+      ],
     },
     listing: {
       auction: 'Auction',

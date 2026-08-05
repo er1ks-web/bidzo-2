@@ -91,7 +91,7 @@ export default function HeroSection({ liveListings = [] }) {
     .slice(0, 4);
 
   return (
-    <section className="relative overflow-hidden text-foreground min-h-[calc(100vh-65px)] flex flex-col justify-center">
+    <section className="relative overflow-hidden text-foreground min-h-screen flex flex-col justify-center">
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-20 sm:pt-12 sm:pb-28">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
 
@@ -184,18 +184,6 @@ export default function HeroSection({ liveListings = [] }) {
 
         </div>
       </div>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1, duration: 0.6 }}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2">
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}>
-          <ChevronDown className="w-8 h-8 text-accent" strokeWidth={2.5} />
-        </motion.div>
-      </motion.div>
     </section>);
 
 }

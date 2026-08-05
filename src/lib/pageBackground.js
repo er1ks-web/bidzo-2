@@ -22,4 +22,16 @@ export const pageBackgroundStyle = {
 // practice -- hence the visible seams. min-h-screen (100vh) doesn't depend
 // on any ancestor at all, so it's guaranteed to cover the full viewport
 // regardless of layout structure.
-export const pageBackgroundClassName = 'min-h-screen';
+// `page-ambient-bg` is a marker class picked up by the cursor-glow effect
+// in index.css + CursorDotGlow.jsx -- it lets that single shared listener
+// find "the current page's background layer" on any page without every
+// page needing to wire up the effect itself.
+//
+// -mt-[65px] pt-[65px] pulls this wrapper's background up underneath the
+// sticky Navbar (which is 65px tall -- h-16 + its 1px border) instead of
+// starting right after it. The negative margin and the matching padding
+// cancel out for layout purposes (children still render at the same
+// position), but the background itself now extends behind the navbar, so
+// its backdrop-blur has actual texture/color to blur instead of a flat
+// background-color -- that's the glass look the navbar is going for.
+export const pageBackgroundClassName = '-mt-[65px] pt-[65px] min-h-screen page-ambient-bg';
