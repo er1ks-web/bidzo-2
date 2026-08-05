@@ -91,7 +91,7 @@ export default function HeroSection({ liveListings = [] }) {
     .slice(0, 4);
 
   return (
-    <section className="relative overflow-hidden text-foreground min-h-[calc(100vh-65px)] flex flex-col justify-center">
+    <section className="relative overflow-hidden text-foreground sm:min-h-[calc(100vh-65px)] flex flex-col justify-center">
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-20 sm:pt-12 sm:pb-28">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
 
@@ -151,8 +151,8 @@ export default function HeroSection({ liveListings = [] }) {
                       <Icon className="w-4 h-4 text-accent" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold leading-tight">{vp.title}</p>
-                      <p className="text-xs text-foreground/50 leading-snug mt-0.5">{vp.desc}</p>
+                      <p className="text-sm font-display font-semibold leading-tight">{vp.title}</p>
+                      <p className="hidden sm:block text-xs text-foreground/50 leading-snug mt-0.5">{vp.desc}</p>
                     </div>
                   </motion.div>
                 );
@@ -160,7 +160,7 @@ export default function HeroSection({ liveListings = [] }) {
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="hidden lg:grid grid-cols-2 gap-2">
             {previewListings.length > 0 ?
             previewListings.map((listing, i) =>
             <HeroAuctionCard key={listing.id} listing={listing} index={i} />
@@ -189,7 +189,7 @@ export default function HeroSection({ liveListings = [] }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1, duration: 0.6 }}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2">
+        className="hidden sm:block absolute bottom-6 left-1/2 -translate-x-1/2">
         <motion.div
           animate={{ y: [0, 8, 0] }}
           transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}>

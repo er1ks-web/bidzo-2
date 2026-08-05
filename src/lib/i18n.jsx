@@ -21,15 +21,15 @@ const translations = {
       valueProps: [
         {
           title: 'Pilnīgi bez maksas',
-          desc: 'Bez sludinājumu maksas, bez komisijas — vienmēr',
+          desc: 'Bez sludinājumu maksas, bez komisijas',
         },
         {
           title: 'Tikai reālas atsauksmes',
-          desc: 'Atsauksmes tikai pēc pabeigta darījuma, ne agrāk',
+          desc: 'Tikai pēc pabeigta darījuma',
         },
         {
           title: 'Tūlītēji paziņojumi',
-          desc: 'E-pasts brīdī, kad esat pārsolīts vai darījums mainās',
+          desc: 'E-pasts par pārsolījumiem un darījumiem',
         },
       ],
     },
@@ -380,15 +380,15 @@ const translations = {
       valueProps: [
         {
           title: 'Completely free',
-          desc: 'No listing fees, no commission — ever',
+          desc: 'No listing fees, no commission',
         },
         {
           title: 'Real reviews only',
-          desc: 'Reviews only unlock after a completed deal, never before',
+          desc: 'Only after a completed deal',
         },
         {
           title: 'Instant deal alerts',
-          desc: "Emailed the moment you're outbid or your deal updates",
+          desc: 'Emailed on outbids and deal updates',
         },
       ],
     },
