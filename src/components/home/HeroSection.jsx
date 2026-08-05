@@ -92,7 +92,7 @@ export default function HeroSection({ liveListings = [] }) {
 
   return (
     <section className="relative overflow-hidden text-foreground sm:min-h-[calc(100vh-65px)] flex flex-col justify-center">
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-20 sm:pt-12 sm:pb-28">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-8 sm:pt-12 sm:pb-28">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
 
           <motion.div
@@ -137,7 +137,7 @@ export default function HeroSection({ liveListings = [] }) {
               </Link>
             </div>
 
-            <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-xl">
+            <div className="hidden sm:grid mt-10 sm:grid-cols-3 gap-6 sm:gap-5 max-w-xl">
               {valueProps.map((vp, i) => {
                 const Icon = VALUE_PROP_ICONS[i] || Tag;
                 return (
@@ -146,21 +146,21 @@ export default function HeroSection({ liveListings = [] }) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 + i * 0.1, duration: 0.4 }}
-                    className="flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                      <Icon className="w-4 h-4 text-accent" />
-                    </div>
-                    <div>
+                    className="flex flex-col items-center text-center sm:items-start sm:text-left">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                        <Icon className="w-4 h-4 text-accent" />
+                      </div>
                       <p className="text-sm font-display font-semibold leading-tight">{vp.title}</p>
-                      <p className="hidden sm:block text-xs text-foreground/50 leading-snug mt-0.5">{vp.desc}</p>
                     </div>
+                    <p className="text-xs text-foreground/50 leading-snug mt-1.5 max-w-[220px] sm:max-w-none">{vp.desc}</p>
                   </motion.div>
                 );
               })}
             </div>
           </motion.div>
 
-          <div className="hidden lg:grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {previewListings.length > 0 ?
             previewListings.map((listing, i) =>
             <HeroAuctionCard key={listing.id} listing={listing} index={i} />
