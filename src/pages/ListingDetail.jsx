@@ -362,11 +362,6 @@ export default function ListingDetail() {
     );
   }
 
-  // Block any edit attempts on published listings
-  if (listing.published && isOwner) {
-    toast.error(t('profile_extra.publishedNoEdit'));
-  }
-
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
       {/* Back button */}
