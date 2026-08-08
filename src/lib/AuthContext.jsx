@@ -61,15 +61,13 @@ export const AuthProvider = ({ children }) => {
 
           const profile = Array.isArray(profileData) ? (profileData[0] || null) : null
           if (!profile) {
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert({
-                id: currentUser.id,
-                email: currentUser.email,
-                profile_picture_url: currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || '',
-              })
-
-            if (insertError) console.log(insertError)
+            // Normally the on_auth_user_created_profile trigger already created
+            // this row at signup. This is the self-heal path for the rare case
+            // where that didn't happen -- a raw client insert can't do it (no
+            // INSERT grant on profiles for authenticated), so this goes through
+            // a SECURITY DEFINER RPC scoped to auth.uid() instead.
+            const { error: rpcError } = await supabase.rpc('ensure_own_profile')
+            if (rpcError) console.log(rpcError)
             setNeedsOnboarding(true)
           } else {
             setNeedsOnboarding(!profile.username)
