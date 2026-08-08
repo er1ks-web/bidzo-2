@@ -2,16 +2,16 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Sun, Moon, Monitor, Check, Gavel, Trophy, Clock, MessageCircle, Package } from 'lucide-react';
 import { useTheme } from '@/lib/ThemeContext.jsx';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
 import { useI18n } from '@/lib/i18n.jsx';
 import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 import { supabase } from '@/supabase';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 export default function Settings() {
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const { t } = useI18n();
   const [prefs, setPrefs] = useState(null);
@@ -121,24 +121,23 @@ export default function Settings() {
           )}
         </div>
 
-        <div className="bg-card rounded-xl border p-6 opacity-60">
+        <div className="bg-card rounded-xl border p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('settings_page.appearance')}</h2>
-            <Badge variant="secondary" className="font-normal">{t('settings_page.comingSoon')}</Badge>
           </div>
-          <p className="text-xs text-muted-foreground mb-4 -mt-2">
-            {t('settings_page.appearanceDisabledNote')}
-          </p>
 
-          <div className="space-y-2 pointer-events-none select-none">
+          <div className="space-y-2">
             {APPEARANCE_OPTIONS.map(({ value, label, description, icon: Icon }) => {
               const isActive = theme === value;
               return (
-                <div
+                <button
                   key={value}
-                  className={`w-full flex items-center gap-4 p-4 rounded-lg border-2 text-left ${
-                    isActive ? 'border-accent bg-accent/5' : 'border-border'
-                  }`}
+                  type="button"
+                  onClick={() => setTheme(value)}
+                  className={cn(
+                    "w-full flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-colors",
+                    isActive ? 'border-accent bg-accent/5' : 'border-border hover:border-accent/40'
+                  )}
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isActive ? 'bg-accent/15' : 'bg-muted'}`}>
                     <Icon className={`w-5 h-5 ${isActive ? 'text-accent' : 'text-muted-foreground'}`} />
@@ -148,7 +147,7 @@ export default function Settings() {
                     <p className="text-xs text-muted-foreground">{description}</p>
                   </div>
                   {isActive && <Check className="w-5 h-5 text-accent shrink-0" />}
-                </div>
+                </button>
               );
             })}
           </div>

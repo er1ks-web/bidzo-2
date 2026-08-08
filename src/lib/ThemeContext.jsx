@@ -3,12 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 const ThemeContext = createContext(null);
 const STORAGE_KEY = 'bidzo-theme';
 
-// Light mode is fully built (theme, persistence, Settings page) but held back
-// while the light palette itself still needs polish across older components
-// that use hardcoded colors instead of theme tokens. Flip this to true (and
-// bring back the Settings entry point in Profile.jsx + the /settings route
-// in App.jsx) to re-enable it later -- nothing else needs to change.
-export const LIGHT_MODE_ENABLED = false;
+export const LIGHT_MODE_ENABLED = true;
 
 function systemPrefersDark() {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;

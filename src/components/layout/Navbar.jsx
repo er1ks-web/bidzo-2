@@ -13,12 +13,14 @@ const LANGUAGES = [
 ];
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
+import { useTheme } from '@/lib/ThemeContext.jsx';
 import { supabase } from '@/supabase'
 
 export default function Navbar() {
   const { t, lang, setLang } = useI18n();
   const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
+  const { effectiveTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -29,7 +31,9 @@ export default function Navbar() {
   const myMaxBidByListingIdRef = useRef(new Map())
   const wasWinningByListingIdRef = useRef(new Map())
 
-  const logoUrl = 'https://xnadmnketxbquyrgqmcs.supabase.co/storage/v1/object/public/site-assets/bidzo-web-logo-new.png'
+  const logoUrl = effectiveTheme === 'light'
+    ? 'https://xnadmnketxbquyrgqmcs.supabase.co/storage/v1/object/public/site-assets/bidzo-web-logo-new-inverted.png'
+    : 'https://xnadmnketxbquyrgqmcs.supabase.co/storage/v1/object/public/site-assets/bidzo-web-logo-new.png'
   const fallbackLogoUrl = logoUrl
 
   const navLinks = [
