@@ -1,4 +1,5 @@
 import { Toaster } from 'sonner'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
@@ -102,6 +103,7 @@ function App() {
                 },
               }}
             />
+            <SpeedInsights />
           </I18nProvider>
         </QueryClientProvider>
       </AuthProvider>
