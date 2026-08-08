@@ -6,7 +6,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Star, Calendar, LogOut, Package, Gavel, Wallet as WalletIcon, Settings, AlertCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, Star, Calendar, LogOut, Package, Gavel, Wallet as WalletIcon, Settings, X, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import ListingCard from '@/components/listings/ListingCard';
 import AuctionTimer from '@/components/listings/AuctionTimer';
 import WalletCard from '@/components/wallet/WalletCard';
@@ -427,6 +428,8 @@ export default function Profile() {
   const avatarUrl = userProfile?.profile_picture_url;
 
   const [activeTab, setActiveTab] = useState(enableWallet ? (isMobile ? 'wallet' : 'bids') : 'bids');
+  const [expandedListingGroups, setExpandedListingGroups] = useState({ sold: false, active: false, expired: false });
+  const toggleListingGroup = (key) => setExpandedListingGroups((prev) => ({ ...prev, [key]: !prev[key] }));
 
   useEffect(() => {
     setActiveTab(enableWallet ? (isMobile ? 'wallet' : 'bids') : 'bids');
@@ -639,45 +642,63 @@ export default function Profile() {
 
                  return (
                    <>
-                     {myListings.some(l => l.published) && (
-                       <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 flex gap-3">
-                         <AlertCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-                         <p className="text-xs text-foreground">
-                           {t('profile_extra.publishedNoEdit')}
-                         </p>
-                       </div>
-                     )}
-
                      {sold.length > 0 && (
                        <div>
-                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('profile_extra.sold')} ({sold.length})</h3>
-                         <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
-                           {sold.map((listing, i) => (
-                             <ListingCard key={listing.id} listing={listing} index={i} />
-                           ))}
-                         </div>
+                         <button
+                           type="button"
+                           onClick={() => toggleListingGroup('sold')}
+                           className="w-full flex items-center justify-between gap-2 py-1"
+                         >
+                           <h3 className="text-sm font-semibold text-muted-foreground">{t('profile_extra.sold')} ({sold.length})</h3>
+                           <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", expandedListingGroups.sold && "rotate-180")} />
+                         </button>
+                         {expandedListingGroups.sold && (
+                           <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 mt-3">
+                             {sold.map((listing, i) => (
+                               <ListingCard key={listing.id} listing={listing} index={i} />
+                             ))}
+                           </div>
+                         )}
                        </div>
                      )}
 
                      {active.length > 0 && (
-                       <div className={sold.length > 0 ? 'mt-6' : ''}>
-                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('profile_extra.active')} ({active.length})</h3>
-                         <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
-                           {active.map((listing, i) => (
-                             <ListingCard key={listing.id} listing={listing} index={i} />
-                           ))}
-                         </div>
+                       <div className={sold.length > 0 ? 'mt-4' : ''}>
+                         <button
+                           type="button"
+                           onClick={() => toggleListingGroup('active')}
+                           className="w-full flex items-center justify-between gap-2 py-1"
+                         >
+                           <h3 className="text-sm font-semibold text-muted-foreground">{t('profile_extra.active')} ({active.length})</h3>
+                           <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", expandedListingGroups.active && "rotate-180")} />
+                         </button>
+                         {expandedListingGroups.active && (
+                           <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 mt-3">
+                             {active.map((listing, i) => (
+                               <ListingCard key={listing.id} listing={listing} index={i} />
+                             ))}
+                           </div>
+                         )}
                        </div>
                      )}
 
                      {expired.length > 0 && (
-                       <div className={(sold.length > 0 || active.length > 0) ? 'mt-6' : ''}>
-                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('profile_extra.expired')} ({expired.length})</h3>
-                         <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
-                           {expired.map((listing, i) => (
-                             <ListingCard key={listing.id} listing={listing} index={i} />
-                           ))}
-                         </div>
+                       <div className={(sold.length > 0 || active.length > 0) ? 'mt-4' : ''}>
+                         <button
+                           type="button"
+                           onClick={() => toggleListingGroup('expired')}
+                           className="w-full flex items-center justify-between gap-2 py-1"
+                         >
+                           <h3 className="text-sm font-semibold text-muted-foreground">{t('profile_extra.expired')} ({expired.length})</h3>
+                           <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", expandedListingGroups.expired && "rotate-180")} />
+                         </button>
+                         {expandedListingGroups.expired && (
+                           <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 mt-3">
+                             {expired.map((listing, i) => (
+                               <ListingCard key={listing.id} listing={listing} index={i} />
+                             ))}
+                           </div>
+                         )}
                        </div>
                      )}
                    </>
@@ -828,45 +849,64 @@ export default function Profile() {
 
               return (
                 <>
-                  {myListings.some(l => l.published) && (
-                    <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 flex gap-3">
-                      <AlertCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-                      <p className="text-xs text-foreground">
-                        {t('profile_extra.publishedNoEdit')}
-                      </p>
-                    </div>
-                  )}
 
                   {sold.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('profile_extra.sold')} ({sold.length})</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        {sold.map((listing, i) => (
-                          <ListingCard key={listing.id} listing={listing} index={i} />
-                        ))}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => toggleListingGroup('sold')}
+                        className="w-full flex items-center justify-between gap-2 py-1"
+                      >
+                        <h3 className="text-sm font-semibold text-muted-foreground">{t('profile_extra.sold')} ({sold.length})</h3>
+                        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", expandedListingGroups.sold && "rotate-180")} />
+                      </button>
+                      {expandedListingGroups.sold && (
+                        <div className="grid grid-cols-2 gap-4 mt-3">
+                          {sold.map((listing, i) => (
+                            <ListingCard key={listing.id} listing={listing} index={i} />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {active.length > 0 && (
-                    <div className={sold.length > 0 ? 'mt-6' : ''}>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('profile_extra.active')} ({active.length})</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        {active.map((listing, i) => (
-                          <ListingCard key={listing.id} listing={listing} index={i} />
-                        ))}
-                      </div>
+                    <div className={sold.length > 0 ? 'mt-4' : ''}>
+                      <button
+                        type="button"
+                        onClick={() => toggleListingGroup('active')}
+                        className="w-full flex items-center justify-between gap-2 py-1"
+                      >
+                        <h3 className="text-sm font-semibold text-muted-foreground">{t('profile_extra.active')} ({active.length})</h3>
+                        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", expandedListingGroups.active && "rotate-180")} />
+                      </button>
+                      {expandedListingGroups.active && (
+                        <div className="grid grid-cols-2 gap-4 mt-3">
+                          {active.map((listing, i) => (
+                            <ListingCard key={listing.id} listing={listing} index={i} />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {expired.length > 0 && (
-                    <div className={(sold.length > 0 || active.length > 0) ? 'mt-6' : ''}>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('profile_extra.expired')} ({expired.length})</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        {expired.map((listing, i) => (
-                          <ListingCard key={listing.id} listing={listing} index={i} />
-                        ))}
-                      </div>
+                    <div className={(sold.length > 0 || active.length > 0) ? 'mt-4' : ''}>
+                      <button
+                        type="button"
+                        onClick={() => toggleListingGroup('expired')}
+                        className="w-full flex items-center justify-between gap-2 py-1"
+                      >
+                        <h3 className="text-sm font-semibold text-muted-foreground">{t('profile_extra.expired')} ({expired.length})</h3>
+                        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", expandedListingGroups.expired && "rotate-180")} />
+                      </button>
+                      {expandedListingGroups.expired && (
+                        <div className="grid grid-cols-2 gap-4 mt-3">
+                          {expired.map((listing, i) => (
+                            <ListingCard key={listing.id} listing={listing} index={i} />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
