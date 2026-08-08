@@ -5,6 +5,7 @@ import { Flame, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import EndingSoonCard from '@/components/listings/EndingSoonCard';
 import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
+import { useI18n } from '@/lib/i18n.jsx';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -21,6 +22,7 @@ function getEndingSoon(listings) {
 }
 
 export default function EndingSoon() {
+  const { t } = useI18n();
   const [allListings, setAllListings] = useState([]);
   const [visibleIds, setVisibleIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
@@ -78,15 +80,15 @@ export default function EndingSoon() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Flame className="w-6 h-6 text-red-500" />
-            <h1 className="text-2xl sm:text-3xl font-display font-bold">Ending Soon</h1>
+            <h1 className="text-2xl sm:text-3xl font-display font-bold">{t('ending_soon_page.title')}</h1>
             {visibleListings.length > 0 && (
               <span className="ml-2 bg-red-100 text-red-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                {visibleListings.length} live
+                {t('ending_soon_page.liveBadge').replace('{count}', visibleListings.length)}
               </span>
             )}
           </div>
           <p className="text-muted-foreground text-sm">
-            Auctions ending in the next hour — act fast!
+            {t('ending_soon_page.subtitle')}
           </p>
         </div>
         <Button
@@ -96,7 +98,7 @@ export default function EndingSoon() {
           className="gap-2 shrink-0"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          Refresh
+          {t('ending_soon_page.refresh')}
         </Button>
       </div>
 
@@ -109,8 +111,8 @@ export default function EndingSoon() {
       ) : visibleListings.length === 0 ? (
         <div className="text-center py-24 text-muted-foreground">
           <Flame className="w-12 h-12 mx-auto mb-4 opacity-20" />
-          <p className="text-lg font-medium">No auctions ending soon</p>
-          <p className="text-sm mt-1">Check back in a bit — new auctions are always starting.</p>
+          <p className="text-lg font-medium">{t('ending_soon_page.emptyTitle')}</p>
+          <p className="text-sm mt-1">{t('ending_soon_page.emptySubtitle')}</p>
         </div>
       ) : (
         <div className="space-y-8">
@@ -119,7 +121,7 @@ export default function EndingSoon() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                <h2 className="text-sm font-bold text-red-600 uppercase tracking-wide">Final Minute</h2>
+                <h2 className="text-sm font-bold text-red-600 uppercase tracking-wide">{t('ending_soon_page.finalMinuteSection')}</h2>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 <AnimatePresence>
@@ -141,7 +143,7 @@ export default function EndingSoon() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
-                <h2 className="text-sm font-bold text-orange-500 uppercase tracking-wide">Under 10 Minutes</h2>
+                <h2 className="text-sm font-bold text-orange-500 uppercase tracking-wide">{t('ending_soon_page.under10Section')}</h2>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 <AnimatePresence>
@@ -158,7 +160,7 @@ export default function EndingSoon() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="h-2 w-2 rounded-full bg-yellow-400" />
-                <h2 className="text-sm font-bold text-yellow-600 uppercase tracking-wide">Ending This Hour</h2>
+                <h2 className="text-sm font-bold text-yellow-600 uppercase tracking-wide">{t('ending_soon_page.thisHourSection')}</h2>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 <AnimatePresence>
@@ -171,7 +173,7 @@ export default function EndingSoon() {
           )}
 
           <p className="text-xs text-muted-foreground text-center">
-            Auto-refreshes every 30 seconds · Last updated {lastRefresh.toLocaleTimeString()}
+            {t('ending_soon_page.autoRefresh').replace('{time}', lastRefresh.toLocaleTimeString())}
           </p>
         </div>
       )}

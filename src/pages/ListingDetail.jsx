@@ -24,13 +24,6 @@ import { cn } from '@/lib/utils';
 import { getActiveFilterKeys, normalizeCategory } from '@/lib/categories';
 import { toast } from 'sonner';
 
-const LOCATION_NAMES = {
-  riga: 'Rīga', daugavpils: 'Daugavpils', liepaja: 'Liepāja',
-  jelgava: 'Jelgava', jurmala: 'Jūrmala', ventspils: 'Ventspils',
-  rezekne: 'Rēzekne', valmiera: 'Valmiera', jekabpils: 'Jēkabpils',
-  ogre: 'Ogre', tukums: 'Tukums', cesis: 'Cēsis', other: 'Cita',
-};
-
 export default function ListingDetail() {
   const { t } = useI18n();
   const { user, requireLogin } = useAuth();
@@ -161,7 +154,7 @@ export default function ListingDetail() {
   useEffect(() => {
     if (!listing) return;
     const price = listing.current_bid || listing.price;
-    const description = `${listing.listing_type === 'auction' ? 'Auction' : 'Buy now'} · €${price?.toFixed(2)} · ${listing.description?.slice(0, 120) || ''}`;
+    const description = `${listing.listing_type === 'auction' ? t('listing.auction') : t('listing.buyNow')} · €${price?.toFixed(2)} · ${listing.description?.slice(0, 120) || ''}`;
     const image = listing.images?.[0] || '';
 
     const setMeta = (prop, content, attr = 'property') => {
@@ -256,11 +249,11 @@ export default function ListingDetail() {
 
   const handleContact = () => {
     if (!user) {
-      requireLogin('Log in to message the seller');
+      requireLogin(t('listing_extra.loginToMessage'));
       return;
     }
     if (!listing?.seller_id) {
-      toast.error('Seller not available');
+      toast.error(t('listing_extra.sellerUnavailable'));
       return
     }
     const convId = [user.id, listing.seller_id].sort().join('_');
@@ -269,7 +262,7 @@ export default function ListingDetail() {
 
   const handleBuyNow = async () => {
     if (!user) {
-      requireLogin('Log in to complete your purchase');
+      requireLogin(t('listing_extra.loginToPurchase'));
       return;
     }
 
@@ -282,18 +275,18 @@ export default function ListingDetail() {
       console.log('[BuyNowFixed] rpc buy_now result', { txId, rpcError })
 
       if (rpcError) {
-        toast.error(rpcError.message || 'Could not complete purchase. Please try again.')
+        toast.error(rpcError.message || t('listing_extra.purchaseFailed'))
         return
       }
 
-      toast.success('Purchase confirmed! Check your Transaction Room.')
+      toast.success(t('listing_extra.purchaseConfirmed'))
       queryClient.invalidateQueries({ queryKey: ['listing', listingId] })
       queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
       queryClient.invalidateQueries({ queryKey: ['tx-buyer'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['tx-seller'], exact: false })
     } catch (e) {
       console.log(e)
-      toast.error('Something went wrong. Please try again.')
+      toast.error(t('listing_extra.somethingWrong'))
     }
   };
 
@@ -311,10 +304,10 @@ export default function ListingDetail() {
         throw error
       }
 
-      toast.success('Listing deleted');
+      toast.success(t('listing_extra.listingDeleted'));
       setTimeout(() => navigate('/profile'), 500);
     } catch (err) {
-      toast.error(err?.message || 'Failed to delete listing');
+      toast.error(err?.message || t('listing_extra.deleteFailed'));
       console.error(err);
     } finally {
       setDeletingListing(false);
@@ -352,7 +345,7 @@ export default function ListingDetail() {
 
   // Block any edit attempts on published listings
   if (listing.published && isOwner) {
-    toast.error('Published listings cannot be edited.');
+    toast.error(t('profile_extra.publishedNoEdit'));
   }
 
   return (
@@ -446,19 +439,19 @@ export default function ListingDetail() {
                   ? <Trophy className="w-5 h-5 text-green-400" />
                   : <Clock className="w-5 h-5 text-accent" />}
                 <p className="font-semibold text-sm">
-                  {listing.status === 'completed' ? 'Deal Completed!' : 'Auction Ended — Deal in Progress'}
+                  {listing.status === 'completed' ? t('listing_extra.dealCompleted') : t('listing_extra.dealInProgress')}
                 </p>
               </div>
               {highestBidderNameFallback && (
                 <p className="text-sm text-muted-foreground">
-                  Winner: <span className="text-foreground font-medium">{highestBidderNameFallback}</span>
+                  {t('listing_extra.winner')} <span className="text-foreground font-medium">{highestBidderNameFallback}</span>
                   {' '}· €{(currentBidFallback != null ? currentBidFallback : listing.current_bid)?.toFixed(2)}
                 </p>
               )}
               {(isWinner || isOwner) && listing.status !== 'completed' && (
                 <RouterLink to="/deals">
                   <button className="w-full h-9 rounded-md bg-accent text-accent-foreground text-sm font-medium hover:bg-accent/90 transition-colors">
-                    Go to Transaction Room →
+                    {t('listing_extra.goToTransactionRoom')}
                   </button>
                 </RouterLink>
               )}
@@ -489,9 +482,9 @@ export default function ListingDetail() {
             <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 flex gap-3">
               <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-sm text-accent">Published listings cannot be edited</p>
+                <p className="font-semibold text-sm text-accent">{t('listing_extra.lockedTitle')}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  This listing is locked and cannot be modified. If you need to make changes, please contact support.
+                  {t('listing_extra.lockedBody')}
                 </p>
               </div>
             </div>
@@ -538,7 +531,7 @@ export default function ListingDetail() {
             <div className="flex items-center gap-2 text-sm">
               <MapPin className="w-4 h-4 text-muted-foreground" />
               <span>
-                {LOCATION_NAMES[listing.location] || listing.location}
+                {listing.location ? t(`locations.${listing.location}`) : ''}
                 {listing.location_custom ? ` · ${listing.location_custom}` : ''}
               </span>
             </div>
@@ -577,12 +570,12 @@ export default function ListingDetail() {
               </div>
               <div>
                 <p className="font-semibold group-hover:text-accent transition-colors">
-                  {sellerProfile?.username || listing.seller_name || 'User'}
+                  {sellerProfile?.username || listing.seller_name || t('profile_extra.userFallback')}
                 </p>
                 {sellerRating?.avg ? (
                   <StarRatingDisplay rating={sellerRating.avg} count={sellerRating.count} size="sm" />
                 ) : (
-                  <p className="text-xs text-muted-foreground">View profile →</p>
+                  <p className="text-xs text-muted-foreground">{t('listing_extra.viewProfile')}</p>
                 )}
               </div>
             </Link>
@@ -620,7 +613,7 @@ export default function ListingDetail() {
               className="w-full gap-2 text-destructive border-transparent hover:bg-destructive hover:text-black hover:border-transparent"
             >
               <Trash2 className="w-4 h-4" />
-              Delete Listing
+              {t('listing_extra.deleteListing')}
             </Button>
           )}
           </div>

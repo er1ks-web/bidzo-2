@@ -20,7 +20,7 @@ export default function Login() {
   const handlePasswordReset = async () => {
     if (loading) return
     if (!email) {
-      toast.error('Enter your email first')
+      toast.error(t('login_extra.enterEmailFirst'))
       return
     }
 
@@ -31,12 +31,12 @@ export default function Login() {
 
     if (error) {
       console.log(error)
-      toast.error(error.message || 'Password reset failed')
+      toast.error(error.message || t('login_extra.passwordResetFailed'))
       setLoading(false)
       return
     }
 
-    toast.success('Password reset email sent')
+    toast.success(t('login_extra.passwordResetSent'))
     setLoading(false)
   }
 
@@ -53,7 +53,7 @@ export default function Login() {
 
     if (error) {
       console.log(error)
-      toast.error(error.message || 'Google sign-in failed')
+      toast.error(error.message || t('login_extra.googleSigninFailed'))
       setLoading(false)
     }
   }
@@ -87,18 +87,18 @@ export default function Login() {
 
     if (error) {
       console.log(error);
-      toast.error(error.message || (mode === 'signup' ? 'Sign up failed' : 'Login failed'));
+      toast.error(error.message || (mode === 'signup' ? t('login_extra.signupFailed') : t('login_extra.loginFailed')));
       setLoading(false);
       return;
     }
 
     if (mode === 'signup' && !data?.session) {
-      toast.success('Account created. Please verify your email, then log in.');
+      toast.success(t('login_extra.accountCreatedVerify'));
       setLoading(false);
       return;
     }
 
-    toast.success(mode === 'signup' ? 'Account created' : 'Logged in');
+    toast.success(mode === 'signup' ? t('login_extra.accountCreated') : t('login_extra.loggedIn'));
     setLoading(false);
     const to = location.state?.from || '/profile'
     console.log('[Auth] navigate', { to });
@@ -145,7 +145,7 @@ export default function Login() {
             onClick={handleGoogle}
             className="w-full gap-2"
           >
-            <span>Continue with</span>
+            <span>{t('login_extra.continueWith')}</span>
             <img
               src="https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png"
               alt="Google"
@@ -156,7 +156,7 @@ export default function Login() {
           </Button>
 
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('login_extra.email')}</Label>
             <Input
               id="email"
               type="email"
@@ -168,7 +168,7 @@ export default function Login() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t('login_extra.password')}</Label>
             <Input
               id="password"
               type="password"
@@ -187,7 +187,7 @@ export default function Login() {
                 disabled={loading}
                 className="text-xs text-muted-foreground hover:text-foreground underline"
               >
-                Forgot password?
+                {t('login_extra.forgotPassword')}
               </button>
             </div>
           )}

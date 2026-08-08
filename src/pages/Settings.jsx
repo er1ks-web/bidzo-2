@@ -3,31 +3,33 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Sun, Moon, Monitor, Check, Gavel, Trophy, Clock, MessageCircle, Package } from 'lucide-react';
 import { useTheme } from '@/lib/ThemeContext.jsx';
 import { useAuth } from '@/lib/AuthContext';
+import { useI18n } from '@/lib/i18n.jsx';
 import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 import { supabase } from '@/supabase';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
-const APPEARANCE_OPTIONS = [
-  { value: 'light', label: 'Light', description: 'Bright background, always on', icon: Sun },
-  { value: 'dark', label: 'Dark', description: "Bidzo's original dark look", icon: Moon },
-  { value: 'system', label: 'Match device', description: 'Follows your device setting', icon: Monitor },
-];
-
-const NOTIFICATION_OPTIONS = [
-  { field: 'outbid', label: 'Outbid alerts', description: "Someone placed a higher bid than yours", icon: Gavel },
-  { field: 'auction_won', label: 'Auction won / bought', description: 'You won an auction or completed a Buy Now', icon: Trophy },
-  { field: 'auction_ended', label: 'Auction ended reminders', description: 'Your auction ended and needs a winner accepted', icon: Clock },
-  { field: 'transaction_chat', label: 'Deal updates', description: 'Confirmations, shipping and delivery status on your deals', icon: Package },
-  { field: 'new_message', label: 'New messages', description: 'Someone sent you a message on Bidzo', icon: MessageCircle },
-];
-
 export default function Settings() {
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { t } = useI18n();
   const [prefs, setPrefs] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const APPEARANCE_OPTIONS = [
+    { value: 'light', label: t('settings_page.themeLight'), description: t('settings_page.themeLightDesc'), icon: Sun },
+    { value: 'dark', label: t('settings_page.themeDark'), description: t('settings_page.themeDarkDesc'), icon: Moon },
+    { value: 'system', label: t('settings_page.themeSystem'), description: t('settings_page.themeSystemDesc'), icon: Monitor },
+  ];
+
+  const NOTIFICATION_OPTIONS = [
+    { field: 'outbid', label: t('settings_page.notifOutbidLabel'), description: t('settings_page.notifOutbidDesc'), icon: Gavel },
+    { field: 'auction_won', label: t('settings_page.notifWonLabel'), description: t('settings_page.notifWonDesc'), icon: Trophy },
+    { field: 'auction_ended', label: t('settings_page.notifEndedLabel'), description: t('settings_page.notifEndedDesc'), icon: Clock },
+    { field: 'transaction_chat', label: t('settings_page.notifDealLabel'), description: t('settings_page.notifDealDesc'), icon: Package },
+    { field: 'new_message', label: t('settings_page.notifMessageLabel'), description: t('settings_page.notifMessageDesc'), icon: MessageCircle },
+  ];
 
   useEffect(() => {
     if (!user) return;
@@ -43,7 +45,7 @@ export default function Settings() {
       if (cancelled) return;
       if (error) {
         console.log(error);
-        toast.error('Failed to load notification settings');
+        toast.error(t('settings_page.loadFailed'));
       } else {
         setPrefs(data);
       }
@@ -65,7 +67,7 @@ export default function Settings() {
 
     if (error) {
       console.log(error);
-      toast.error('Failed to update notification setting');
+      toast.error(t('settings_page.updateFailed'));
       setPrefs((p) => ({ ...p, [field]: previous }));
     }
   };
@@ -78,15 +80,15 @@ export default function Settings() {
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to profile
+          {t('settings_page.backToProfile')}
         </Link>
 
-        <h1 className="text-2xl font-display font-bold mb-1">Settings</h1>
-        <p className="text-muted-foreground text-sm mb-8">Manage how Bidzo looks and notifies you.</p>
+        <h1 className="text-2xl font-display font-bold mb-1">{t('settings_page.title')}</h1>
+        <p className="text-muted-foreground text-sm mb-8">{t('settings_page.subtitle')}</p>
 
         <div className="bg-card rounded-xl border p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Email notifications</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('settings_page.emailNotifications')}</h2>
           </div>
 
           {loading ? (
@@ -121,11 +123,11 @@ export default function Settings() {
 
         <div className="bg-card rounded-xl border p-6 opacity-60">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Appearance</h2>
-            <Badge variant="secondary" className="font-normal">Coming soon</Badge>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('settings_page.appearance')}</h2>
+            <Badge variant="secondary" className="font-normal">{t('settings_page.comingSoon')}</Badge>
           </div>
           <p className="text-xs text-muted-foreground mb-4 -mt-2">
-            We're polishing the light palette before turning this on — for now Bidzo stays in dark mode.
+            {t('settings_page.appearanceDisabledNote')}
           </p>
 
           <div className="space-y-2 pointer-events-none select-none">

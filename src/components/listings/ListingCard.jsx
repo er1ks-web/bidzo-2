@@ -6,13 +6,6 @@ import { cn } from '@/lib/utils';
 import AuctionTimer from './AuctionTimer';
 import { motion } from 'framer-motion';
 
-const LOCATION_NAMES = {
-  riga: 'Rīga', daugavpils: 'Daugavpils', liepaja: 'Liepāja',
-  jelgava: 'Jelgava', jurmala: 'Jūrmala', ventspils: 'Ventspils',
-  rezekne: 'Rēzekne', valmiera: 'Valmiera', jekabpils: 'Jēkabpils',
-  ogre: 'Ogre', tukums: 'Tukums', cesis: 'Cēsis', other: 'Cita',
-};
-
 const PLACEHOLDER_IMAGES = [
   'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=300&fit=crop',
   'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
@@ -97,7 +90,7 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
             <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
               <MapPin className="w-3 h-3" />
               <span>
-                {LOCATION_NAMES[listing.location] || listing.location}
+                {listing.location ? t(`locations.${listing.location}`) : ''}
                 {listing.location_custom ? ` · ${listing.location_custom}` : ''}
               </span>
             </div>
@@ -134,7 +127,7 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-accent transition-colors"
                 >
                   <User className="w-3 h-3" />
-                  <span className="truncate">{sellerDisplayName || 'Seller'}</span>
+                  <span className="truncate">{sellerDisplayName || t('listing_extra.sellerFallback')}</span>
                 </Link>
               </div>
             )}

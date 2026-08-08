@@ -6,6 +6,14 @@ import { useEffect } from 'react';
 // class in lib/pageBackground.js -- no per-page wiring needed.
 export default function CursorDotGlow() {
   useEffect(() => {
+    // Touchscreens have no real cursor to follow -- (hover: hover) and
+    // (pointer: fine) together mean "there's a mouse/trackpad that can
+    // hover", which is a more reliable signal than screen width (a
+    // touch-only tablet in landscape can be as wide as a small laptop).
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      return;
+    }
+
     let raf = null;
     let current = null;
 

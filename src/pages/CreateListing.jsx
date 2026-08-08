@@ -130,20 +130,20 @@ export default function CreateListing() {
 
   const validate = () => {
     const errors = [];
-    if (!form.title.trim()) errors.push('Title is required');
-    if (!form.description.trim()) errors.push('Description is required');
-    if (activeFilterKeys.includes('brand') && !form.brand.trim()) errors.push('Brand is required');
-    if (!form.category) errors.push('Category is required');
-    if (form.category && activeSubcategories.length > 0 && !form.subcategory) errors.push('Subcategory is required');
-    if (!form.price || parseFloat(form.price) <= 0) errors.push(`${form.listing_type === 'auction' ? 'Starting price' : 'Price'} must be greater than 0`);
-    if (!form.location) errors.push('Location is required');
-    if (form.images.length === 0) errors.push('At least one photo is required');
+    if (!form.title.trim()) errors.push('title');
+    if (!form.description.trim()) errors.push('description');
+    if (activeFilterKeys.includes('brand') && !form.brand.trim()) errors.push('brand');
+    if (!form.category) errors.push('category');
+    if (form.category && activeSubcategories.length > 0 && !form.subcategory) errors.push('subcategory');
+    if (!form.price || parseFloat(form.price) <= 0) errors.push(form.listing_type === 'auction' ? 'startingPrice' : 'price');
+    if (!form.location) errors.push('location');
+    if (form.images.length === 0) errors.push('images');
     return errors;
   };
 
   const handleSubmit = async () => {
     if (isCreateRestricted) {
-      toast.error('Your account is restricted from creating listings.');
+      toast.error(t('create_extra.restrictedAccount'));
       return;
     }
     const errors = validate();
@@ -154,7 +154,7 @@ export default function CreateListing() {
     setValidationErrors([]);
 
     if (!user?.email) {
-      toast.error('Please log in to publish.');
+      toast.error(t('create_extra.loginToPublish'));
       return;
     }
 
@@ -169,7 +169,7 @@ export default function CreateListing() {
       setEligibility(freshEligibility);
 
       if (!freshEligibility.canPublish) {
-        toast.error('Please top up your wallet to publish.');
+        toast.error(t('create_extra.topUpToPublish'));
         setShowTopUp(true);
         return;
       }
@@ -231,7 +231,7 @@ export default function CreateListing() {
     if (enableWallet && freshWallet) {
       await chargeListingFee(user, freshWallet, listing.id);
     }
-    toast.success('Listing published!');
+    toast.success(t('create_extra.published'));
     window.location.href = '/profile';
     } catch (err) {
       const msg = String(err?.message || '').toLowerCase();
@@ -239,9 +239,9 @@ export default function CreateListing() {
       const isRls = msg.includes('row-level security') || msg.includes('row level security');
       const isPermission = code === '42501' || msg.includes('permission') || msg.includes('not allowed');
       if (isRls || isPermission) {
-        toast.error('Your account is restricted from creating listings.');
+        toast.error(t('create_extra.restrictedAccount'));
       } else {
-        toast.error('Something went wrong. Please try again.');
+        toast.error(t('listing_extra.somethingWrong'));
       }
       setIsSubmitting(false);
     }
@@ -277,7 +277,7 @@ export default function CreateListing() {
             id="title"
             value={form.title}
             onChange={(e) => { setForm(f => ({ ...f, title: e.target.value })); setValidationErrors([]); }}
-            className={cn("mt-1.5", validationErrors.some(e => e.includes('Title')) && "border-destructive ring-1 ring-destructive")}
+            className={cn("mt-1.5", validationErrors.includes('title') && "border-destructive ring-1 ring-destructive")}
           />
         </div>
 
@@ -303,7 +303,7 @@ export default function CreateListing() {
                 setValidationErrors([]);
               }}
             >
-              <SelectTrigger className={cn("mt-1.5", validationErrors.some(e => e.includes('Category')) && "border-destructive ring-1 ring-destructive")}><SelectValue placeholder={t('create_extra.selectCategory')} /></SelectTrigger>
+              <SelectTrigger className={cn("mt-1.5", validationErrors.includes('category') && "border-destructive ring-1 ring-destructive")}><SelectValue placeholder={t('create_extra.selectCategory')} /></SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map(c => (
                   <SelectItem key={c} value={c}>{t(`categories.${c}`)}</SelectItem>
@@ -338,7 +338,7 @@ export default function CreateListing() {
               <SelectTrigger
                 className={cn(
                   'mt-1.5',
-                  validationErrors.some(e => e.includes('Subcategory')) && 'border-destructive ring-1 ring-destructive'
+                  validationErrors.includes('subcategory') && 'border-destructive ring-1 ring-destructive'
                 )}
               >
                 <SelectValue placeholder={t('create_extra.selectSubcategory')} />
@@ -433,7 +433,7 @@ export default function CreateListing() {
               min="0"
               value={form.price}
               onChange={(e) => { setForm(f => ({ ...f, price: e.target.value })); setValidationErrors([]); }}
-              className={cn("pl-7", validationErrors.some(e => e.includes('price') || e.includes('Price')) && "border-destructive ring-1 ring-destructive")}
+              className={cn("pl-7", (validationErrors.includes('price') || validationErrors.includes('startingPrice')) && "border-destructive ring-1 ring-destructive")}
             />
           </div>
         </div>
@@ -542,7 +542,7 @@ export default function CreateListing() {
               {validationErrors.map((err, i) => (
                 <li key={i} className="text-sm text-destructive flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
-                  {err}
+                  {t(`create_extra.errors.${err}`)}
                 </li>
               ))}
             </ul>
@@ -553,14 +553,14 @@ export default function CreateListing() {
           <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 flex gap-3">
             <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-destructive">You cannot publish listings right now</p>
+              <p className="text-sm font-semibold text-destructive">{t('create_extra.cannotPublishNow')}</p>
               {createRestrictedUntil ? (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Restricted until: {createRestrictedUntil.toLocaleString()}
+                  {t('create_extra.restrictedUntil').replace('{date}', createRestrictedUntil.toLocaleString())}
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Your account is restricted from creating listings.
+                  {t('create_extra.restrictedAccount')}
                 </p>
               )}
             </div>
@@ -572,7 +572,7 @@ export default function CreateListing() {
           onClick={() => {
             if (isSubmitting) return;
             if (isCreateRestricted) {
-              toast.error('Your account is restricted from creating listings.');
+              toast.error(t('create_extra.restrictedAccount'));
               return;
             }
             const errors = validate();

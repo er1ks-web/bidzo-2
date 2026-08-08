@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/supabase'
 import { useAuth } from '@/lib/AuthContext';
+import { useI18n } from '@/lib/i18n.jsx';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Zap } from 'lucide-react';
@@ -19,12 +20,13 @@ import {
 
 export default function BuyNowPanel({ listing, user, onSuccess }) {
   const { requireLogin } = useAuth();
+  const { t } = useI18n();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
 
   const handleBuyNow = async () => {
     if (!user) {
-      requireLogin('Log in to buy now');
+      requireLogin(t('buy_now_panel.loginToBuyNow'));
       return;
     }
     setIsSubmitting(true);
@@ -37,12 +39,12 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
       const sellerId = listing?.seller_id
       console.log('[BuyNow] ids', { buyerId, sellerId })
       if (!buyerId || !sellerId) {
-        toast.error('Missing buyer or seller info')
+        toast.error(t('buy_now_panel.missingInfo'))
         return
       }
 
       if (!listing?.buy_now_price) {
-        toast.error('Buy Now is not available for this listing.')
+        toast.error(t('buy_now_panel.notAvailable'))
         return
       }
 
@@ -59,7 +61,7 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
       const latestUnavailable = !latest || latest?.is_sold || latest?.status !== 'active' || latestHasEnded
       console.log('[BuyNow] latest listing state', { latest, latestHasEnded, latestUnavailable })
       if (latestUnavailable) {
-        toast.error('This listing is no longer available.')
+        toast.error(t('buy_now_panel.noLongerAvailable'))
 
         queryClient.invalidateQueries({ queryKey: ['listing', listing.id] })
         queryClient.invalidateQueries({ queryKey: ['listings-browse'] })
@@ -76,7 +78,7 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
       if (existingTxError) console.log(existingTxError)
       if (Array.isArray(existingTx) && existingTx[0]) {
         console.log('[BuyNow] existingTx found', existingTx[0])
-        toast.error('This listing has already been purchased.')
+        toast.error(t('buy_now_panel.alreadyPurchased'))
 
         queryClient.setQueryData(['listing', listing.id], (prev) => {
           if (!prev || typeof prev !== 'object') return prev
@@ -98,7 +100,7 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
       console.log('[BuyNow] rpc buy_now result', { txId, rpcError })
 
       if (rpcError) {
-        toast.error(rpcError.message || 'Could not complete Buy Now. Please try again.')
+        toast.error(rpcError.message || t('buy_now_panel.buyNowFailed'))
         return
       }
 
@@ -122,29 +124,32 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
 
       console.log('[BuyNow] success')
 
-      toast.success('Purchase confirmed! Check your Transaction Room.');
+      toast.success(t('listing_extra.purchaseConfirmed'));
       onSuccess?.();
     } catch (err) {
       console.log(err)
-      toast.error('Something went wrong. Please try again.');
+      toast.error(t('listing_extra.somethingWrong'));
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const [descBeforeTitle, descAfterTitle] = t('buy_now_panel.confirmDesc').split('{title}');
+  const [descMiddle, descAfterAmount] = descAfterTitle.split('{amount}');
 
   return (
     <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold text-foreground">Buy Now</span>
+          <span className="text-sm font-semibold text-foreground">{t('buy_now_panel.title')}</span>
         </div>
         <span className="text-lg font-bold font-display text-foreground">
           €{listing.buy_now_price?.toFixed(2)}
         </span>
       </div>
       <p className="text-xs text-muted-foreground">
-        Skip the auction — purchase this item instantly at the Buy Now price.
+        {t('buy_now_panel.skipAuction')}
       </p>
 
       <AlertDialog>
@@ -154,21 +159,21 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
             disabled={isSubmitting}
           >
             <Zap className="w-4 h-4" />
-            {isSubmitting ? 'Processing...' : `Buy Now for €${listing.buy_now_price?.toFixed(2)}`}
+            {isSubmitting ? t('buy_now_panel.processing') : t('buy_now_panel.buyNowFor').replace('{amount}', listing.buy_now_price?.toFixed(2))}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm instant purchase</AlertDialogTitle>
+            <AlertDialogTitle>{t('buy_now_panel.confirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              You are about to buy <strong>{listing.title}</strong> for{' '}
-              <strong>€{listing.buy_now_price?.toFixed(2)}</strong> instantly. This will end the auction immediately.
+              {descBeforeTitle}<strong>{listing.title}</strong>{descMiddle}
+              <strong>€{listing.buy_now_price?.toFixed(2)}</strong>{descAfterAmount}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('create_extra.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleBuyNow}>
-              Confirm Purchase
+              {t('buy_now_panel.confirmPurchase')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -516,8 +516,8 @@ export default function Profile() {
           {isRestricted && (
             <p className="mt-2 text-sm text-destructive">
               {isTimeRestricted
-                ? `Your account is banned till ${restrictionUntil.toLocaleString()}`
-                : 'Your account is banned'}
+                ? t('profile_extra.bannedUntil').replace('{date}', restrictionUntil.toLocaleString())
+                : t('profile_extra.bannedPermanent')}
             </p>
           )}
         </div>
@@ -529,7 +529,7 @@ export default function Profile() {
             className="gap-2"
           >
             <User className="w-4 h-4" />
-            Edit Profile
+            {t('profile_extra.editProfile')}
           </Button>
 
           <Button
@@ -540,7 +540,7 @@ export default function Profile() {
           >
             <Link to="/settings">
               <Settings className="w-4 h-4" />
-              Settings
+              {t('profile.settings')}
             </Link>
           </Button>
 
@@ -551,7 +551,7 @@ export default function Profile() {
               const { error } = await supabase.auth.signOut()
               if (error) {
                 console.log(error)
-                toast.error('Failed to log out. Please try again.')
+                toast.error(t('profile_extra.logoutFailed'))
               }
             }}
             className="gap-2"
@@ -643,14 +643,14 @@ export default function Profile() {
                        <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 flex gap-3">
                          <AlertCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
                          <p className="text-xs text-foreground">
-                           Published listings cannot be edited. If you need to make changes, please contact support.
+                           {t('profile_extra.publishedNoEdit')}
                          </p>
                        </div>
                      )}
 
                      {sold.length > 0 && (
                        <div>
-                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">Sold ({sold.length})</h3>
+                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('profile_extra.sold')} ({sold.length})</h3>
                          <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
                            {sold.map((listing, i) => (
                              <ListingCard key={listing.id} listing={listing} index={i} />
@@ -661,7 +661,7 @@ export default function Profile() {
 
                      {active.length > 0 && (
                        <div className={sold.length > 0 ? 'mt-6' : ''}>
-                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">Active ({active.length})</h3>
+                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('profile_extra.active')} ({active.length})</h3>
                          <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
                            {active.map((listing, i) => (
                              <ListingCard key={listing.id} listing={listing} index={i} />
@@ -672,7 +672,7 @@ export default function Profile() {
 
                      {expired.length > 0 && (
                        <div className={(sold.length > 0 || active.length > 0) ? 'mt-6' : ''}>
-                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">Expired ({expired.length})</h3>
+                         <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('profile_extra.expired')} ({expired.length})</h3>
                          <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
                            {expired.map((listing, i) => (
                              <ListingCard key={listing.id} listing={listing} index={i} />
@@ -695,13 +695,13 @@ export default function Profile() {
                         <div className="bg-card/40 backdrop-blur-md border border-border/60 shadow-lg shadow-black/20 rounded-lg p-4 flex items-center justify-between group-hover:border-accent group-hover:shadow-md transition-all duration-200">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div className="w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0">
-                              <img src={bid.imageUrl} alt={bid?.listing?.title || 'Listing'} className="w-full h-full object-cover" />
+                              <img src={bid.imageUrl} alt={bid?.listing?.title || t('profile_extra.listingFallback')} className="w-full h-full object-cover" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="font-medium text-sm truncate group-hover:text-accent transition-colors">{bid?.listing?.title || 'Listing'}</p>
+                              <p className="font-medium text-sm truncate group-hover:text-accent transition-colors">{bid?.listing?.title || t('profile_extra.listingFallback')}</p>
                               {bid?.placed_at && (
                                 <p className="text-xs text-muted-foreground truncate">
-                                  Bid placed {format(new Date(bid.placed_at), 'MMM d, yyyy HH:mm')}
+                                  {t('profile_extra.bidPlaced')} {format(new Date(bid.placed_at), 'MMM d, yyyy HH:mm')}
                                 </p>
                               )}
                             </div>
@@ -745,7 +745,7 @@ export default function Profile() {
                               <Star key={s} className={`w-4 h-4 ${s <= review.rating ? 'fill-accent text-accent' : 'text-muted'}`} />
                             ))}
                           </div>
-                          <span className="text-sm font-medium">{review.reviewer_name || 'User'}</span>
+                          <span className="text-sm font-medium">{review.reviewer_name || t('profile_extra.userFallback')}</span>
                         </div>
                         {review.review_text && <p className="text-sm text-muted-foreground">{review.review_text}</p>}
                         {review.images?.length > 0 && (
@@ -832,14 +832,14 @@ export default function Profile() {
                     <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 flex gap-3">
                       <AlertCircle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
                       <p className="text-xs text-foreground">
-                        Published listings cannot be edited. If you need to make changes, please contact support.
+                        {t('profile_extra.publishedNoEdit')}
                       </p>
                     </div>
                   )}
 
                   {sold.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">Sold ({sold.length})</h3>
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('profile_extra.sold')} ({sold.length})</h3>
                       <div className="grid grid-cols-2 gap-4">
                         {sold.map((listing, i) => (
                           <ListingCard key={listing.id} listing={listing} index={i} />
@@ -850,7 +850,7 @@ export default function Profile() {
 
                   {active.length > 0 && (
                     <div className={sold.length > 0 ? 'mt-6' : ''}>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">Active ({active.length})</h3>
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('profile_extra.active')} ({active.length})</h3>
                       <div className="grid grid-cols-2 gap-4">
                         {active.map((listing, i) => (
                           <ListingCard key={listing.id} listing={listing} index={i} />
@@ -861,7 +861,7 @@ export default function Profile() {
 
                   {expired.length > 0 && (
                     <div className={(sold.length > 0 || active.length > 0) ? 'mt-6' : ''}>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">Expired ({expired.length})</h3>
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('profile_extra.expired')} ({expired.length})</h3>
                       <div className="grid grid-cols-2 gap-4">
                         {expired.map((listing, i) => (
                           <ListingCard key={listing.id} listing={listing} index={i} />
@@ -884,13 +884,13 @@ export default function Profile() {
                     <div className="bg-card/40 backdrop-blur-md border border-border/60 shadow-lg shadow-black/20 rounded-lg p-4 flex items-center justify-between group-hover:border-accent group-hover:shadow-md transition-all duration-200">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-12 h-12 rounded-md overflow-hidden bg-muted shrink-0">
-                          <img src={bid.imageUrl} alt={bid?.listing?.title || 'Listing'} className="w-full h-full object-cover" />
+                          <img src={bid.imageUrl} alt={bid?.listing?.title || t('profile_extra.listingFallback')} className="w-full h-full object-cover" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-sm truncate group-hover:text-accent transition-colors">{bid?.listing?.title || 'Listing'}</p>
+                          <p className="font-medium text-sm truncate group-hover:text-accent transition-colors">{bid?.listing?.title || t('profile_extra.listingFallback')}</p>
                           {bid?.placed_at && (
                             <p className="text-xs text-muted-foreground truncate">
-                              Bid placed {format(new Date(bid.placed_at), 'MMM d, yyyy HH:mm')}
+                              {t('profile_extra.bidPlaced')} {format(new Date(bid.placed_at), 'MMM d, yyyy HH:mm')}
                             </p>
                           )}
                         </div>
@@ -934,7 +934,7 @@ export default function Profile() {
                           <Star key={s} className={`w-4 h-4 ${s <= review.rating ? 'fill-accent text-accent' : 'text-muted'}`} />
                         ))}
                       </div>
-                      <span className="text-sm font-medium">{review.reviewer_name || 'User'}</span>
+                      <span className="text-sm font-medium">{review.reviewer_name || t('profile_extra.userFallback')}</span>
                     </div>
                     {review.review_text && <p className="text-sm text-muted-foreground">{review.review_text}</p>}
                    {review.images?.length > 0 && (

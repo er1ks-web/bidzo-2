@@ -4,6 +4,7 @@ import { Gavel, Flame, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
+import { useI18n } from '@/lib/i18n.jsx';
 
 const PLACEHOLDER_IMAGES = [
   'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=300&fit=crop',
@@ -22,6 +23,7 @@ function getTimeLeft(endDate) {
 }
 
 export default function EndingSoonCard({ listing, index = 0, onExpired }) {
+  const { t } = useI18n();
   const [timeLeft, setTimeLeft] = useState(() => getTimeLeft(listing.auction_end));
 
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function EndingSoonCard({ listing, index = 0, onExpired }) {
             : 'bg-primary text-primary-foreground'
         }`}>
           {isFinalMinute ? <Flame className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-          {isFinalMinute ? 'Final minute!' : `${String(timeLeft.minutes).padStart(2,'0')}:${String(timeLeft.seconds).padStart(2,'0')}`}
+          {isFinalMinute ? t('ending_soon_page.finalMinuteBadge') : `${String(timeLeft.minutes).padStart(2,'0')}:${String(timeLeft.seconds).padStart(2,'0')}`}
         </div>
         {listing.featured && (
           <Badge className="absolute top-3 right-3 bg-accent text-accent-foreground shadow">★</Badge>
@@ -85,11 +87,11 @@ export default function EndingSoonCard({ listing, index = 0, onExpired }) {
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-muted-foreground">{listing.bid_count > 0 ? 'Current bid' : 'Starting price'}</p>
+            <p className="text-xs text-muted-foreground">{listing.bid_count > 0 ? t('listing.currentBid') : t('listing.startingPrice')}</p>
             <p className="text-lg font-bold font-display">€{displayPrice?.toFixed(2)}</p>
           </div>
           {listing.bid_count > 0 && (
-            <span className="text-xs text-muted-foreground">{listing.bid_count} bid{listing.bid_count !== 1 ? 's' : ''}</span>
+            <span className="text-xs text-muted-foreground">{listing.bid_count} {t('listing.bids')}</span>
           )}
         </div>
 
@@ -100,8 +102,8 @@ export default function EndingSoonCard({ listing, index = 0, onExpired }) {
           }`}>
             {isFinalMinute ? <Flame className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
             {isFinalMinute
-              ? `Final minute — ${String(timeLeft.seconds)}s left!`
-              : `Ending in ${timeLeft.minutes}m ${String(timeLeft.seconds).padStart(2,'0')}s`
+              ? t('ending_soon_page.finalMinuteCountdown').replace('{sec}', String(timeLeft.seconds))
+              : t('ending_soon_page.endingInCountdown').replace('{min}', timeLeft.minutes).replace('{sec}', String(timeLeft.seconds).padStart(2,'0'))
             }
           </div>
         </div>
@@ -116,7 +118,7 @@ export default function EndingSoonCard({ listing, index = 0, onExpired }) {
             }`}
           >
             <Gavel className="w-3.5 h-3.5" />
-            Place Bid
+            {t('listing.placeBid')}
           </Button>
         </Link>
       </div>

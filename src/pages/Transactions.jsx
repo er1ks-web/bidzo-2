@@ -286,7 +286,7 @@ export default function Transactions() {
 
     if (error) {
       console.log(error)
-      toast.error(error.message || 'Failed to confirm')
+      toast.error(error.message || t('deals_extra.confirmFailed'))
       setConfirmLoading(null);
       return
     }
@@ -307,7 +307,7 @@ export default function Transactions() {
       const authUser = authData?.user
 
       if (!authUser?.id || (authUser.id !== tx.seller_id && authUser.id !== tx.buyer_id)) {
-        toast.error('Only the buyer or seller can cancel this transaction.')
+        toast.error(t('deals_extra.onlyPartiesCancel'))
         setConfirmLoading(null)
         return
       }
@@ -315,19 +315,19 @@ export default function Transactions() {
       const isBuyer = authUser.id === tx.buyer_id
 
       if (isBuyer && tx.buyer_confirmed) {
-        toast.error('This purchase has already been confirmed.')
+        toast.error(t('deals_extra.purchaseAlreadyConfirmed'))
         setConfirmLoading(null)
         return
       }
 
       if (!isBuyer && tx.seller_confirmed) {
-        toast.error('This sale has already been confirmed.')
+        toast.error(t('deals_extra.saleAlreadyConfirmed'))
         setConfirmLoading(null)
         return
       }
 
       if (!reason) {
-        toast.error('Please select a cancellation reason.')
+        toast.error(t('deals_extra.selectCancelReason'))
         setConfirmLoading(null)
         return
       }
@@ -339,15 +339,15 @@ export default function Transactions() {
 
       if (rpcError) {
         console.log(rpcError)
-        toast.error(rpcError.message || 'Failed to cancel transaction')
+        toast.error(rpcError.message || t('deals_extra.cancelFailed'))
         setConfirmLoading(null)
         return
       }
 
-      toast.success('Transaction cancelled. The listing has been cancelled.')
+      toast.success(t('deals_extra.transactionCancelled'))
     } catch (e) {
       console.log(e)
-      toast.error('Failed to cancel transaction')
+      toast.error(t('deals_extra.cancelFailed'))
     }
 
     refetchAll()
@@ -367,7 +367,7 @@ export default function Transactions() {
 
     if (error) {
       console.log(error)
-      toast.error(error.message || 'Failed to mark as shipped')
+      toast.error(error.message || t('deals_extra.markShippedFailed'))
       setShippedModalTx(null);
       setConfirmLoading(null);
       return
@@ -384,7 +384,7 @@ export default function Transactions() {
 
     if (error) {
       console.log(error)
-      toast.error(error.message || 'Failed to mark as received')
+      toast.error(error.message || t('deals_extra.markReceivedFailed'))
       setConfirmLoading(null);
       return
     }
@@ -396,7 +396,7 @@ export default function Transactions() {
   if (!user) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-12 text-center text-muted-foreground">
-        Loading...
+        {t('common.loading')}
       </div>
     );
   }

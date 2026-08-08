@@ -1,9 +1,16 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
-import { Search, Plus, MessageSquare, User, Gavel, Menu, Globe, Flame, Heart, LogOut, Trophy } from 'lucide-react';
+import { Search, Plus, MessageSquare, User, Gavel, Menu, Globe, Flame, Heart, LogOut, Trophy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+
+const LANGUAGES = [
+  { code: 'lv', label: 'Latviešu' },
+  { code: 'en', label: 'English' },
+  { code: 'ru', label: 'Русский' },
+];
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/supabase'
@@ -388,26 +395,46 @@ export default function Navbar() {
                 </Button>
               </Link>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setLang(lang === 'lv' ? 'en' : 'lv')}
-              className="ml-2 gap-1.5">
-              
-              <Globe className="w-4 h-4" />
-              <span className="text-xs font-semibold uppercase">{lang}</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-2 gap-1.5">
+                  <Globe className="w-4 h-4" />
+                  <span className="text-xs font-semibold uppercase">{lang}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {LANGUAGES.map(({ code, label }) => (
+                  <DropdownMenuItem key={code} onClick={() => setLang(code)} className="gap-2">
+                    <span className="text-xs font-semibold uppercase w-6 shrink-0">{code}</span>
+                    <span className="flex-1">{label}</span>
+                    {lang === code && <Check className="w-4 h-4 text-accent shrink-0" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Mobile nav */}
           <div className="flex md:hidden items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setLang(lang === 'lv' ? 'en' : 'lv')}>
-              
-              <Globe className="w-4 h-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Globe className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {LANGUAGES.map(({ code, label }) => (
+                  <DropdownMenuItem key={code} onClick={() => setLang(code)} className="gap-2">
+                    <span className="text-xs font-semibold uppercase w-6 shrink-0">{code}</span>
+                    <span className="flex-1">{label}</span>
+                    {lang === code && <Check className="w-4 h-4 text-accent shrink-0" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">

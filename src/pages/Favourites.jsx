@@ -11,13 +11,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '@/lib/i18n.jsx';
 import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 
-const LOCATION_NAMES = {
-  riga: 'Rīga', daugavpils: 'Daugavpils', liepaja: 'Liepāja',
-  jelgava: 'Jelgava', jurmala: 'Jūrmala', ventspils: 'Ventspils',
-  rezekne: 'Rēzekne', valmiera: 'Valmiera', jekabpils: 'Jēkabpils',
-  ogre: 'Ogre', tukums: 'Tukums', cesis: 'Cēsis', other: 'Cita',
-};
-
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=300&fit=crop';
 
 export default function Favourites() {
@@ -97,9 +90,9 @@ export default function Favourites() {
 
     if (error) {
       console.log(error)
-      toast.error('Failed to remove from favourites')
+      toast.error(t('favourites_extra.removeFailed'))
     } else {
-      toast.success('Removed from favourites');
+      toast.success(t('favourites_extra.removed'));
       await refetchWatches();
     }
     setRemovingId(null);
@@ -115,7 +108,7 @@ export default function Favourites() {
 
     if (error) {
       console.log(error)
-      toast.error('Failed to update notification setting')
+      toast.error(t('favourites_extra.notifUpdateFailed'))
       return
     }
     await refetchWatches();
@@ -125,7 +118,7 @@ export default function Favourites() {
     return (
       <div className="text-center py-20 text-muted-foreground">
         <Heart className="w-12 h-12 mx-auto mb-4 opacity-20" />
-        <p className="font-medium">{t('nav.login')} to see your favourites</p>
+        <p className="font-medium">{t('favourites_extra.loginPrompt')}</p>
       </div>
     );
   }
@@ -144,10 +137,10 @@ export default function Favourites() {
       {sorted.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <Heart className="w-12 h-12 mx-auto mb-4 opacity-20" />
-          <p className="font-medium">No items in your favourites yet</p>
-          <p className="text-sm mt-1">Hit the Watch button on any listing to track it here.</p>
+          <p className="font-medium">{t('favourites_extra.emptyTitle')}</p>
+          <p className="text-sm mt-1">{t('favourites_extra.emptySubtitle')}</p>
           <Link to="/browse">
-            <Button className="mt-6 bg-accent text-accent-foreground hover:bg-accent/90">Browse Listings</Button>
+            <Button className="mt-6 bg-accent text-accent-foreground hover:bg-accent/90">{t('favourites_extra.browseListings')}</Button>
           </Link>
         </div>
       ) : (
@@ -185,9 +178,9 @@ export default function Favourites() {
                           </Link>
                           <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
                             <MapPin className="w-3 h-3" />
-                            <span>{LOCATION_NAMES[listing.location] || listing.location}</span>
+                            <span>{listing.location ? t(`locations.${listing.location}`) : ''}</span>
                             <span>·</span>
-                            <span>{isAuction ? 'Auction' : 'Fixed Price'}</span>
+                            <span>{isAuction ? t('listing.auction') : t('listing.fixed')}</span>
                           </div>
                         </div>
                         <Button
@@ -203,14 +196,18 @@ export default function Favourites() {
 
                       <div className="flex items-center gap-4">
                         <div>
-                          <p className="text-xs text-muted-foreground">{isAuction && listing.bid_count > 0 ? 'Current bid' : 'Price'}</p>
+                          <p className="text-xs text-muted-foreground">{isAuction && listing.bid_count > 0 ? t('hero_card.currentBid') : t('favourites_extra.price')}</p>
                           <p className="font-bold text-base font-display">€{displayPrice?.toFixed(2)}</p>
                         </div>
                         {isAuction && (
-                          <span className="text-xs text-muted-foreground">{listing.bid_count || 0} bid{listing.bid_count !== 1 ? 's' : ''}</span>
+                          <span className="text-xs text-muted-foreground">{listing.bid_count || 0} {t('listing.bids')}</span>
                         )}
                         {listing.status !== 'active' && (
-                          <Badge variant="outline" className="text-xs">{listing.status}</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {listing.status === 'sold' ? t('listing.sold')
+                              : listing.status === 'cancelled' ? t('favourites_extra.statusCancelled')
+                              : listing.status}
+                          </Badge>
                         )}
                       </div>
 
@@ -220,7 +217,7 @@ export default function Favourites() {
                       )}
                       {hasEnded && (
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> Auction ended
+                          <Clock className="w-3 h-3" /> {t('favourites_extra.auctionEnded')}
                         </span>
                       )}
 

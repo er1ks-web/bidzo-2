@@ -48,7 +48,7 @@ function HeroAuctionCard({ listing, index }) {
           {listing.bid_count > 0 &&
           <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-md flex items-center gap-1">
               <TrendingUp className="w-2.5 h-2.5" />
-              {listing.bid_count} bids
+              {listing.bid_count} {t('hero_card.bids')}
             </div>
           }
         </div>

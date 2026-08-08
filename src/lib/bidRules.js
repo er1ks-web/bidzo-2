@@ -39,32 +39,30 @@ export function getMaxBid(currentBid) {
 
 /**
  * Validates a proposed bid amount.
- * Returns { valid: true } or { valid: false, error: string }
+ * Returns { valid: true } or { valid: false, errorKey: string, ...params }
+ *
+ * Error messages are NOT built here -- this module has no i18n context, so it
+ * returns a stable errorKey (+ any interpolation values like min/max) and the
+ * caller translates it via t(`bid_panel.${errorKey}`) with the params filled in.
  *
  * @param {number} amount   — the amount the user wants to bid
  * @param {number} currentBid — current highest bid (or starting price if no bids)
- * @returns {{ valid: boolean, error?: string }}
+ * @returns {{ valid: boolean, errorKey?: string, min?: number, max?: number }}
  */
 export function validateBid(amount, currentBid) {
   const min = getMinNextBid(currentBid);
   const max = getMaxBid(currentBid);
 
   if (isNaN(amount) || amount <= 0) {
-    return { valid: false, error: 'Please enter a valid bid amount.' };
+    return { valid: false, errorKey: 'errorInvalid' };
   }
 
   if (amount < min) {
-    return {
-      valid: false,
-      error: `Your bid is too low. Minimum allowed bid is €${min.toFixed(2)}.`,
-    };
+    return { valid: false, errorKey: 'errorTooLow', min };
   }
 
   if (amount > max) {
-    return {
-      valid: false,
-      error: `Your bid is too high. Maximum allowed bid is €${max.toFixed(2)}.`,
-    };
+    return { valid: false, errorKey: 'errorTooHigh', max };
   }
 
   return { valid: true };

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/supabase';
 import { useAuth } from '@/lib/AuthContext';
+import { useI18n } from '@/lib/i18n.jsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Gavel, TrendingUp, AlertCircle, Zap, X } from 'lucide-react';
@@ -13,6 +14,7 @@ import BidSuccessSheet from './BidSuccessSheet';
 
 export default function BidPanel({ listing, user, onBidPlaced }) {
   const { requireLogin } = useAuth();
+  const { t } = useI18n();
   const [bidMode, setBidMode] = useState('exact'); // 'exact' | 'auto'
   const [bidAmount, setBidAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,6 +25,13 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
   const [showSuccessSheet, setShowSuccessSheet] = useState(false);
   const [myAutoBid, setMyAutoBid] = useState(null);
   const [cancellingAutoBid, setCancellingAutoBid] = useState(false);
+
+  const describeBidError = (result) => {
+    if (!result || result.valid) return '';
+    if (result.errorKey === 'errorTooLow') return t('bid_panel.errorTooLow').replace('{min}', result.min.toFixed(2));
+    if (result.errorKey === 'errorTooHigh') return t('bid_panel.errorTooHigh').replace('{max}', result.max.toFixed(2));
+    return t('bid_panel.errorInvalid');
+  };
 
   const loadMyAutoBid = async (authUserId) => {
     const { data, error } = await supabase
@@ -68,13 +77,13 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
 
     if (error) {
       console.log(error)
-      toast.error(error.message || 'Failed to turn off auto-bid')
+      toast.error(error.message || t('bid_panel.turnOffAutoBidFailed'))
       setCancellingAutoBid(false);
       return
     }
 
     setMyAutoBid(null);
-    toast.success('Auto-bid turned off');
+    toast.success(t('bid_panel.autoBidTurnedOff'));
     setCancellingAutoBid(false);
   };
 
@@ -87,7 +96,7 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
     setBidAmount(val);
     if (val) {
       const result = validateBid(parseFloat(val), currentBid);
-      setValidationError(result.valid ? '' : result.error);
+      setValidationError(result.valid ? '' : describeBidError(result));
     } else {
       setValidationError('');
     }
@@ -99,14 +108,14 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
     const authUser = userData?.user
 
     if (!authUser) {
-      requireLogin('Log in to place a bid');
+      requireLogin(t('bid_panel.loginToBid'));
       return;
     }
 
     const amount = parseFloat(bidAmount);
     const result = validateBid(amount, currentBid);
     if (!result.valid) {
-      setValidationError(result.error);
+      setValidationError(describeBidError(result));
       return;
     }
 
@@ -118,14 +127,14 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
 
     // Check restriction status
     if (buyerTrust?.restriction_type === 'permanent') {
-      toast.error('Your account has been permanently restricted from bidding.');
+      toast.error(t('bid_panel.permanentlyRestricted'));
       return;
     }
 
     if (buyerTrust?.restriction_type === 'temporary') {
       const endDate = new Date(buyerTrust.restriction_end_date);
       if (endDate > new Date()) {
-        toast.error('Your bidding is temporarily restricted.');
+        toast.error(t('bid_panel.temporarilyRestricted'));
         return;
       }
     }
@@ -143,12 +152,12 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
       const latestHasEnded = !!(latest?.auction_end && new Date(latest.auction_end) < new Date())
 
       if (!latest || latest?.is_sold || latest?.status !== 'active' || latestHasEnded) {
-        toast.error('This listing is no longer available for bidding.')
+        toast.error(t('bid_panel.listingUnavailable'))
         return
       }
     } catch (e) {
       console.log(e)
-      toast.error('Could not verify listing availability. Please try again.')
+      toast.error(t('bid_panel.verifyFailed'))
       return
     }
 
@@ -168,8 +177,8 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
 
       if (rpcError) {
         console.log(rpcError);
-        toast.error(rpcError.message || 'Failed to place bid. Please try again.');
-        if (rpcError?.code) setValidationError(`${rpcError.code}: ${rpcError.message || 'Failed to place bid'}`);
+        toast.error(rpcError.message || t('bid_panel.placeBidFailed'));
+        if (rpcError?.code) setValidationError(`${rpcError.code}: ${rpcError.message || t('bid_panel.placeBidFailed')}`);
         setIsSubmitting(false);
         return;
       }
@@ -180,7 +189,7 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
         // Unlike an exact bid, a stronger competing max bid could immediately
         // out-cascade this one within the same call -- so we can't truthfully
         // claim "you're now the highest bidder" the way the success sheet does.
-        toast.success("Top price set! We'll bid for you automatically.");
+        toast.success(t('bid_panel.autoBidSet'));
         await loadMyAutoBid(authUser.id);
       } else {
         setShowSuccessSheet(true);
@@ -188,8 +197,8 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
       onBidPlaced?.();
     } catch (err) {
       console.log(err);
-      toast.error('Failed to place bid. Please try again.');
-      const errorMsg = err.response?.data?.error || err.message || 'Failed to place bid';
+      toast.error(t('bid_panel.placeBidFailed'));
+      const errorMsg = err.response?.data?.error || err.message || t('bid_panel.placeBidFailed');
       setValidationError(errorMsg);
       setIsSubmitting(false);
     }
@@ -247,7 +256,7 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
       <div className="bg-card rounded-xl border p-4 sm:p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Gavel className="w-4 h-4 text-accent" />
-          <span className="font-semibold text-sm">Place a Bid</span>
+          <span className="font-semibold text-sm">{t('bid_panel.title')}</span>
         </div>
 
       {myAutoBid && (
@@ -255,7 +264,7 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
           <div className="flex items-center gap-2 min-w-0">
             <Zap className="w-4 h-4 text-accent shrink-0" />
             <p className="text-xs text-foreground">
-              Auto-Bid is on. We'll bid for you up to <span className="font-bold">€{Number(myAutoBid.max_amount).toFixed(2)}</span>.
+              {t('bid_panel.autoBidOnPrefix')} <span className="font-bold">€{Number(myAutoBid.max_amount).toFixed(2)}</span>.
             </p>
           </div>
           <button
@@ -265,7 +274,7 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
             className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-destructive transition-colors shrink-0"
           >
             <X className="w-3.5 h-3.5" />
-            {cancellingAutoBid ? 'Turning off...' : 'Turn off'}
+            {cancellingAutoBid ? t('bid_panel.turningOff') : t('bid_panel.turnOff')}
           </button>
         </div>
       )}
@@ -277,31 +286,31 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
           onClick={() => { setBidMode('exact'); setValidationError(''); }}
           className={`py-1.5 rounded-md transition-colors ${bidMode === 'exact' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
         >
-          Bid once
+          {t('bid_panel.bidOnce')}
         </button>
         <button
           type="button"
           onClick={() => { setBidMode('auto'); setValidationError(''); }}
           className={`py-1.5 rounded-md transition-colors ${bidMode === 'auto' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
         >
-          Auto-Bid
+          {t('bid_panel.autoBid')}
         </button>
       </div>
 
       {bidMode === 'auto' && (
         <p className="text-xs text-muted-foreground -mt-1">
-          Enter the highest price you're willing to pay. We'll bid for you automatically, a little at a time, only as much as needed to stay in the lead. You will never pay more than this amount.
+          {t('bid_panel.autoBidHelper')}
         </p>
       )}
 
       {/* Info row */}
       <div className="grid grid-cols-2 gap-3 text-xs">
         <div className="bg-muted rounded-lg p-2.5">
-          <p className="text-muted-foreground mb-0.5">Min next bid</p>
+          <p className="text-muted-foreground mb-0.5">{t('bid_panel.minNextBid')}</p>
           <p className="font-bold text-foreground">€{minNext.toFixed(2)}</p>
         </div>
         <div className="bg-muted rounded-lg p-2.5">
-          <p className="text-muted-foreground mb-0.5">Max allowed</p>
+          <p className="text-muted-foreground mb-0.5">{t('bid_panel.maxAllowed')}</p>
           <p className="font-bold text-foreground">€{maxAllowed.toFixed(2)}</p>
         </div>
       </div>
@@ -332,7 +341,7 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
           className="text-xs text-accent hover:underline flex items-center gap-1"
         >
           <TrendingUp className="w-3 h-3" />
-          Use minimum bid (€{minNext.toFixed(2)})
+          {t('bid_panel.useMinBid').replace('{amount}', minNext.toFixed(2))}
         </button>
       )}
 
@@ -358,8 +367,8 @@ export default function BidPanel({ listing, user, onBidPlaced }) {
       >
         <Gavel className="w-4 h-4" />
         {isSubmitting
-          ? (bidMode === 'auto' ? 'Turning on...' : 'Placing bid...')
-          : (bidMode === 'auto' ? 'Turn On Auto-Bid' : 'Place Bid')}
+          ? (bidMode === 'auto' ? t('bid_panel.turningOn') : t('bid_panel.placingBid'))
+          : (bidMode === 'auto' ? t('bid_panel.turnOnAutoBid') : t('bid_panel.placeBid'))}
       </Button>
       </div>
 

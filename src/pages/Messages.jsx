@@ -3,7 +3,7 @@ import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabase'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, User, ArrowLeft, Trash2, ImagePlus, X, MessageCircle } from 'lucide-react';
+import { Send, User, ArrowLeft, Trash2, ImagePlus, X, MessageCircle, Copy, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -55,6 +55,7 @@ export default function Messages() {
   const [sending, setSending] = useState(false);
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [copiedMsgId, setCopiedMsgId] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const MAX_MESSAGE_IMAGES = 5;
   const imageInputRef = useRef(null);
@@ -66,6 +67,17 @@ export default function Messages() {
     setViewerImages(images);
     setViewerIndex(index);
     setViewerOpen(true);
+  };
+
+  const handleCopyMessage = async (msg) => {
+    try {
+      await navigator.clipboard.writeText(msg.content);
+      setCopiedMsgId(msg.id);
+      setTimeout(() => setCopiedMsgId((id) => (id === msg.id ? null : id)), 1500);
+    } catch (e) {
+      console.log(e);
+      toast.error(t('messages_extra.copyFailed'));
+    }
   };
   // Map user_id -> { email, username, avatar } from profiles
   const [profileMap, setProfileMap] = useState({});
@@ -773,9 +785,25 @@ export default function Messages() {
                               })()}
                               <div className="px-4 py-2.5">
                                 {msg.content && <p>{msg.content}</p>}
-                                <p className="text-[10px] mt-1 text-muted-foreground">
-                                  {format(new Date(msg.created_date), 'HH:mm')}
-                                </p>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {format(new Date(msg.created_date), 'HH:mm')}
+                                  </p>
+                                  {msg.content && !isMine && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyMessage(msg)}
+                                      aria-label={t('messages_extra.copyMessage')}
+                                      className="text-muted-foreground/60 hover:text-foreground transition-colors"
+                                    >
+                                      {copiedMsgId === msg.id ? (
+                                        <Check className="w-3 h-3" />
+                                      ) : (
+                                        <Copy className="w-3 h-3" />
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             {isLastMineRead && (

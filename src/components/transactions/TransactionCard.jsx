@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/supabase'
+import { useI18n } from '@/lib/i18n.jsx';
 import ReviewForm from '@/components/reviews/ReviewForm';
 import {
   Select,
@@ -27,14 +28,16 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-const STATUS_CONFIG = {
-  sold_pending: { label: 'Awaiting Confirmation', color: 'bg-yellow-500/20 text-yellow-400', icon: Clock },
-  buyer_confirmed: { label: 'Buyer Confirmed', color: 'bg-blue-500/20 text-blue-400', icon: CheckCircle2 },
-  seller_confirmed: { label: 'Seller Confirmed', color: 'bg-blue-500/20 text-blue-400', icon: CheckCircle2 },
-  in_progress: { label: 'In Progress', color: 'bg-accent/20 text-accent', icon: Truck },
-  completed: { label: 'Completed', color: 'bg-green-500/20 text-green-400', icon: CheckCircle2 },
-  cancelled: { label: 'Cancelled', color: 'bg-destructive/20 text-destructive', icon: Clock },
-};
+function getStatusConfig(t) {
+  return {
+    sold_pending: { label: t('tx_card.statusAwaitingConfirmation'), color: 'bg-yellow-500/20 text-yellow-400', icon: Clock },
+    buyer_confirmed: { label: t('tx_card.statusBuyerConfirmed'), color: 'bg-blue-500/20 text-blue-400', icon: CheckCircle2 },
+    seller_confirmed: { label: t('tx_card.statusSellerConfirmed'), color: 'bg-blue-500/20 text-blue-400', icon: CheckCircle2 },
+    in_progress: { label: t('tx_card.statusInProgress'), color: 'bg-accent/20 text-accent', icon: Truck },
+    completed: { label: t('tx_card.statusCompleted'), color: 'bg-green-500/20 text-green-400', icon: CheckCircle2 },
+    cancelled: { label: t('tx_card.statusCancelled'), color: 'bg-destructive/20 text-destructive', icon: Clock },
+  };
+}
 
 export default function TransactionCard({
   transaction,
@@ -45,6 +48,7 @@ export default function TransactionCard({
   onMarkShipped,
   confirmLoading,
 }) {
+  const { t } = useI18n();
   const [sellerCancelOpen, setSellerCancelOpen] = useState(false)
   const [sellerCancelAck, setSellerCancelAck] = useState(false)
   const [sellerCancelReason, setSellerCancelReason] = useState('')
@@ -54,6 +58,7 @@ export default function TransactionCard({
 
   const isBuyer = !!(currentUserId && transaction?.buyer_id && currentUserId === transaction.buyer_id);
   const isSeller = !!(currentUserId && transaction?.seller_id && currentUserId === transaction.seller_id);
+  const STATUS_CONFIG = getStatusConfig(t);
   const cfg = STATUS_CONFIG[transaction.status] || STATUS_CONFIG.sold_pending;
   const StatusIcon = cfg.icon;
   const isCompleted = transaction.status === 'completed';
@@ -148,7 +153,7 @@ export default function TransactionCard({
 
           <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
             <p>
-              {isBuyer ? 'Seller: ' : 'Buyer: '}
+              {isBuyer ? t('tx_card.sellerLabel') : t('tx_card.buyerLabel')}
               <Link
                 to={`/seller/${encodeURIComponent(isBuyer ? transaction.seller_id : transaction.buyer_id)}`}
                 className="text-accent hover:underline font-medium"
@@ -156,7 +161,7 @@ export default function TransactionCard({
                 {isBuyer ? transaction.seller_name : transaction.buyer_name}
               </Link>
             </p>
-            <p>Ended {format(new Date(transaction.created_date), 'MMM d, yyyy')}</p>
+            <p>{t('tx_card.ended')} {format(new Date(transaction.created_date), 'MMM d, yyyy')}</p>
           </div>
 
           {/* Shipping info — shown when shipped */}
@@ -164,7 +169,7 @@ export default function TransactionCard({
             <div className="mt-2 flex items-start gap-2 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2">
               <Info className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-[10px] text-blue-400 font-semibold mb-0.5">Shipping Info</p>
+                <p className="text-[10px] text-blue-400 font-semibold mb-0.5">{t('tx_card.shippingInfo')}</p>
                 <p className="text-xs text-foreground whitespace-pre-wrap">{transaction.shipping_info}</p>
               </div>
             </div>
@@ -174,16 +179,16 @@ export default function TransactionCard({
           {!isCompleted && !isCancelled && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               <span className={cn('text-[10px] px-2 py-0.5 rounded-full', transaction.buyer_confirmed ? 'bg-green-500/20 text-green-400' : 'bg-muted text-muted-foreground')}>
-                {transaction.buyer_confirmed ? '✓ Buyer confirmed' : '○ Buyer pending'}
+                {transaction.buyer_confirmed ? t('tx_card.buyerConfirmedPill') : t('tx_card.buyerPendingPill')}
               </span>
               <span className={cn('text-[10px] px-2 py-0.5 rounded-full', transaction.seller_confirmed ? 'bg-green-500/20 text-green-400' : 'bg-muted text-muted-foreground')}>
-                {transaction.seller_confirmed ? '✓ Seller confirmed' : '○ Seller pending'}
+                {transaction.seller_confirmed ? t('tx_card.sellerConfirmedPill') : t('tx_card.sellerPendingPill')}
               </span>
               <span className={cn('text-[10px] px-2 py-0.5 rounded-full', transaction.shipped ? 'bg-blue-500/20 text-blue-400' : 'bg-muted text-muted-foreground')}>
-                {transaction.shipped ? '✓ Shipped' : '○ Not shipped'}
+                {transaction.shipped ? t('tx_card.shippedPill') : t('tx_card.notShippedPill')}
               </span>
               <span className={cn('text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground')}>
-                ○ Received
+                {t('tx_card.receivedPill')}
               </span>
             </div>
           )}
@@ -198,14 +203,14 @@ export default function TransactionCard({
         >
           <Button variant="outline" size="sm" className="w-full gap-2">
             <MessageSquare className="w-4 h-4" />
-            Message
+            {t('tx_card.message')}
           </Button>
         </Link>
 
         <Link to={`/listing/${transaction.listing_id}`} className="flex-1">
           <Button variant="outline" size="sm" className="w-full gap-2">
             <ExternalLink className="w-4 h-4" />
-            View Listing
+            {t('tx_card.viewListing')}
           </Button>
         </Link>
 
@@ -217,7 +222,7 @@ export default function TransactionCard({
             disabled={confirmLoading === transaction.id}
           >
             <CheckCircle2 className="w-4 h-4" />
-            {canBuyerConfirm ? 'Confirm Purchase' : 'Confirm Sale'}
+            {canBuyerConfirm ? t('tx_card.confirmPurchase') : t('tx_card.confirmSale')}
           </Button>
         )}
 
@@ -239,31 +244,30 @@ export default function TransactionCard({
                 className="flex-1 gap-2"
                 disabled={confirmLoading === transaction.id}
               >
-                Reject Sale
+                {t('tx_card.rejectSale')}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Reject this sale?</AlertDialogTitle>
+                <AlertDialogTitle>{t('tx_card.rejectSaleQ')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  If you reject this sale, the transaction will be cancelled and the listing will be removed from the marketplace.
-                  Repeated cancellations may result in strikes or account restrictions.
+                  {t('tx_card.rejectSaleDesc')}
                 </AlertDialogDescription>
               </AlertDialogHeader>
 
               <div className="space-y-2">
-                <p className="text-sm font-medium">Reason</p>
+                <p className="text-sm font-medium">{t('tx_card.reason')}</p>
                 <Select value={sellerCancelReason} onValueChange={setSellerCancelReason}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a reason" />
+                    <SelectValue placeholder={t('tx_card.selectReason')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="changed_mind">I changed my mind</SelectItem>
+                    <SelectItem value="changed_mind">{t('tx_card.reasonChangedMind')}</SelectItem>
                     <SelectItem value="buyer_inactive" disabled={!inactiveAllowed}>
-                      Buyer is inactive / not responding{inactiveAllowed ? '' : ' (available after 48h)'}
+                      {t('tx_card.reasonBuyerInactive')}{inactiveAllowed ? '' : t('tx_card.availableAfter48h')}
                     </SelectItem>
-                    <SelectItem value="shipping_problem">Shipping / meetup problem</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="shipping_problem">{t('tx_card.reasonShippingProblem')}</SelectItem>
+                    <SelectItem value="other">{t('tx_card.reasonOther')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -280,18 +284,18 @@ export default function TransactionCard({
                   htmlFor={`seller-cancel-ack-${transaction.id}`}
                   className="text-sm cursor-pointer text-foreground"
                 >
-                  I understand that repeated cancellations may result in strikes or account restrictions
+                  {t('tx_card.ackStrikes')}
                 </label>
               </div>
 
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={confirmLoading === transaction.id}>Keep Sale</AlertDialogCancel>
+                <AlertDialogCancel disabled={confirmLoading === transaction.id}>{t('tx_card.keepSale')}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => onRejectSale?.(transaction, sellerCancelReason)}
                   disabled={confirmLoading === transaction.id || !sellerCancelAck || !sellerCancelReason}
                   className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
-                  Reject Sale
+                  {t('tx_card.rejectSale')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -316,31 +320,30 @@ export default function TransactionCard({
                 className="flex-1 gap-2"
                 disabled={confirmLoading === transaction.id}
               >
-                Cancel Purchase
+                {t('tx_card.cancelPurchase')}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Cancel this purchase?</AlertDialogTitle>
+                <AlertDialogTitle>{t('tx_card.cancelPurchaseQ')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  If you cancel this purchase, the transaction will be cancelled and the listing will be removed from the marketplace.
-                  Repeated cancellations may result in strikes or account restrictions.
+                  {t('tx_card.cancelPurchaseDesc')}
                 </AlertDialogDescription>
               </AlertDialogHeader>
 
               <div className="space-y-2">
-                <p className="text-sm font-medium">Reason</p>
+                <p className="text-sm font-medium">{t('tx_card.reason')}</p>
                 <Select value={buyerCancelReason} onValueChange={setBuyerCancelReason}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a reason" />
+                    <SelectValue placeholder={t('tx_card.selectReason')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="changed_mind">I changed my mind</SelectItem>
+                    <SelectItem value="changed_mind">{t('tx_card.reasonChangedMind')}</SelectItem>
                     <SelectItem value="seller_inactive" disabled={!inactiveAllowed}>
-                      Seller is inactive / not responding{inactiveAllowed ? '' : ' (available after 48h)'}
+                      {t('tx_card.reasonSellerInactive')}{inactiveAllowed ? '' : t('tx_card.availableAfter48h')}
                     </SelectItem>
-                    <SelectItem value="shipping_problem">Shipping / meetup problem</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="shipping_problem">{t('tx_card.reasonShippingProblem')}</SelectItem>
+                    <SelectItem value="other">{t('tx_card.reasonOther')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -357,18 +360,18 @@ export default function TransactionCard({
                   htmlFor={`buyer-cancel-ack-${transaction.id}`}
                   className="text-sm cursor-pointer text-foreground"
                 >
-                  I understand that repeated cancellations may result in strikes or account restrictions
+                  {t('tx_card.ackStrikes')}
                 </label>
               </div>
 
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={confirmLoading === transaction.id}>Keep Purchase</AlertDialogCancel>
+                <AlertDialogCancel disabled={confirmLoading === transaction.id}>{t('tx_card.keepPurchase')}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => onRejectSale?.(transaction, buyerCancelReason)}
                   disabled={confirmLoading === transaction.id || !buyerCancelAck || !buyerCancelReason}
                   className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
-                  Cancel Purchase
+                  {t('tx_card.cancelPurchase')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -383,7 +386,7 @@ export default function TransactionCard({
             disabled={confirmLoading === transaction.id}
           >
             <Truck className="w-4 h-4" />
-            Mark as Shipped
+            {t('tx_card.markShipped')}
           </Button>
         )}
 
@@ -395,7 +398,7 @@ export default function TransactionCard({
             disabled={confirmLoading === transaction.id}
           >
             <CheckCircle2 className="w-4 h-4" />
-            Mark as Received
+            {t('tx_card.markReceived')}
           </Button>
         )}
       </div>
@@ -405,7 +408,7 @@ export default function TransactionCard({
         <div className="border-t px-4 py-4">
           <div className="flex items-center gap-2 mb-3">
             <Star className="w-4 h-4 text-accent" />
-            <span className="text-sm font-semibold">Leave a Review</span>
+            <span className="text-sm font-semibold">{t('tx_card.leaveReview')}</span>
           </div>
           <ReviewForm
             transaction={transaction}
