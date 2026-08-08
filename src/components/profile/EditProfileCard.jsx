@@ -127,7 +127,7 @@ export default function EditProfileCard({ user, profile, lang, onProfileSaved })
         .upload(filePath, file, {
           contentType: file.type || 'image/jpeg',
           cacheControl: '3600',
-          upsert: true,
+          upsert: false,
         })
 
       if (uploadError) {
