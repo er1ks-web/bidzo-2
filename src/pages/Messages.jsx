@@ -619,9 +619,16 @@ export default function Messages() {
           </div>
         </div>
 
-        {/* Chat area */}
+        {/* Chat area -- on mobile, while a conversation is open, this becomes a
+            fixed full-screen overlay pinned to the real viewport (below the
+            navbar) instead of an inline box with a calculated height. Fixed
+            positioning tracks the mobile browser's actual visible viewport,
+            including when the on-screen keyboard opens, so the input row
+            can never end up clipped or scrolled out of reach. */}
         <div className={cn(
           "flex-1 flex flex-col",
+          "fixed inset-x-0 top-[65px] bottom-0 z-40 bg-background rounded-none border-0",
+          "sm:static sm:inset-auto sm:z-auto sm:bg-transparent sm:rounded-xl sm:border-0",
           isMobile
             ? (activeConv || recipientEmail ? "flex" : "hidden")
             : "flex"
