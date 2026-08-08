@@ -1,25 +1,26 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, X } from 'lucide-react';
+import { useI18n } from '@/lib/i18n.jsx';
 
-function useCountdown(endDate) {
+function useCountdown(endDate, t) {
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
     const calc = () => {
       const diff = new Date(endDate) - new Date();
-      if (diff <= 0) { setTimeLeft('Ended'); return; }
+      if (diff <= 0) { setTimeLeft(t('time.ended')); return; }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      if (h > 0) setTimeLeft(`${h}h ${m}m ${s}s`);
-      else if (m > 0) setTimeLeft(`${m}m ${s}s`);
-      else setTimeLeft(`${s}s`);
+      if (h > 0) setTimeLeft(`${h}${t('time.hours')} ${m}${t('time.minutes')} ${s}${t('time.seconds')}`);
+      else if (m > 0) setTimeLeft(`${m}${t('time.minutes')} ${s}${t('time.seconds')}`);
+      else setTimeLeft(`${s}${t('time.seconds')}`);
     };
     calc();
     const id = setInterval(calc, 1000);
     return () => clearInterval(id);
-  }, [endDate]);
+  }, [endDate, t]);
 
   return timeLeft;
 }
@@ -80,7 +81,8 @@ function MiniConfetti({ active }) {
 }
 
 export default function BidSuccessSheet({ isOpen, onClose, auctionEnd }) {
-  const timeLeft = useCountdown(auctionEnd);
+  const { t } = useI18n();
+  const timeLeft = useCountdown(auctionEnd, t);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -125,10 +127,10 @@ export default function BidSuccessSheet({ isOpen, onClose, auctionEnd }) {
 
                   <div>
                     <p className="font-bold text-base text-white leading-tight">
-                      You're now the highest bidder
+                      {t('bid_panel.successHighestBidder')}
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Auction ends in{' '}
+                      {t('bid_panel.successEndsIn')}{' '}
                       <span className="text-accent font-semibold">{timeLeft}</span>
                     </p>
                   </div>

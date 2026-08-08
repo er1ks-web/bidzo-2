@@ -25,6 +25,12 @@ export function normalizeCategory(category) {
   return CATEGORY_ALIASES[key] || key;
 }
 
+// Rentals are priced per month, not as a one-time amount -- fixed-price only,
+// never an auction (see CreateListing.jsx, which enforces this at creation).
+export function isMonthlyRental(listing) {
+  return listing?.category === 'real_estate' && listing?.subcategory === 'rentals';
+}
+
 export function normalizeTextKey(value) {
   if (!value) return '';
   return String(value)

@@ -75,10 +75,14 @@ export default function Home() {
     .filter(l => l.auction_end && new Date(l.auction_end) > now)
     .sort((a, b) => new Date(a.auction_end) - new Date(b.auction_end))
     .slice(0, 4);
+  // View-based, not bid-count-based -- auto-bidding can inflate bid_count
+  // without reflecting genuine buyer interest the way view counts do.
   const trending = [...auctions]
-    .sort((a, b) => (b.bid_count || 0) - (a.bid_count || 0))
+    .sort((a, b) => (b.views || 0) - (a.views || 0))
     .slice(0, 4);
-  const newest = activeListings.slice(0, 8);
+  const newest = [...activeListings]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 8);
 
   if (isLoading) {
     return (
@@ -109,7 +113,7 @@ export default function Home() {
           <ListingSection
             title={`⚡ ${t('sections.trending')}`}
             listings={trending}
-            linkTo="/browse?sort=most_bids&type=auction"
+            linkTo="/browse?sort=most_viewed&type=auction"
           />
         )}
 

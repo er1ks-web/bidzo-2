@@ -248,6 +248,7 @@ export default function Browse() {
         .sort((a, b) => new Date(a.auction_end).getTime() - new Date(b.auction_end).getTime());
     }
     else if (sortBy === 'most_bids') result.sort((a, b) => (b.bid_count || 0) - (a.bid_count || 0));
+    else if (sortBy === 'most_viewed') result.sort((a, b) => (b.views || 0) - (a.views || 0));
     // newest is default sort from API
 
     return result;
@@ -454,6 +455,7 @@ export default function Browse() {
               <SelectItem value="price_desc">{t('filters.priceDesc')}</SelectItem>
               <SelectItem value="ending_soon">{t('filters.endingSoon')}</SelectItem>
               <SelectItem value="most_bids">{t('filters.mostBids')}</SelectItem>
+              <SelectItem value="most_viewed">{t('filters.mostViewed')}</SelectItem>
             </SelectContent>
           </Select>
         </div>

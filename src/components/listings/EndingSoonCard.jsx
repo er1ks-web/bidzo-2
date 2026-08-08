@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n.jsx';
+import { isMonthlyRental } from '@/lib/categories';
 
 const PLACEHOLDER_IMAGES = [
   'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=300&fit=crop',
@@ -88,7 +89,7 @@ export default function EndingSoonCard({ listing, index = 0, onExpired }) {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-muted-foreground">{listing.bid_count > 0 ? t('listing.currentBid') : t('listing.startingPrice')}</p>
-            <p className="text-lg font-bold font-display">€{displayPrice?.toFixed(2)}</p>
+            <p className="text-lg font-bold font-display">€{displayPrice?.toFixed(2)}{isMonthlyRental(listing) && t('common.perMonth')}</p>
           </div>
           {listing.bid_count > 0 && (
             <span className="text-xs text-muted-foreground">{listing.bid_count} {t('listing.bids')}</span>

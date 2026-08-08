@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import AuctionTimer from './AuctionTimer';
 import { motion } from 'framer-motion';
+import { isMonthlyRental } from '@/lib/categories';
 
 const PLACEHOLDER_IMAGES = [
   'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=300&fit=crop',
@@ -103,7 +104,7 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
                     : t('listing.fixed')}
                 </p>
                 <p className="text-lg font-bold font-display text-foreground">
-                  {t('common.eur')}{displayPrice?.toFixed(2)}
+                  {t('common.eur')}{displayPrice?.toFixed(2)}{isMonthlyRental(listing) && t('common.perMonth')}
                 </p>
               </div>
               {isAuction && listing.bid_count > 0 && (

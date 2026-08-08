@@ -15,7 +15,7 @@ import TopUpModal from '@/components/wallet/TopUpModal';
 import ImageUploader from '@/components/listings/ImageUploader';
 import { cn } from '@/lib/utils';
 import { ENABLE_WALLET } from '@/lib/featureFlags';
-import { CATEGORIES, SUBCATEGORIES, getActiveFilterKeys } from '@/lib/categories';
+import { CATEGORIES, SUBCATEGORIES, getActiveFilterKeys, isMonthlyRental } from '@/lib/categories';
 import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 
 const CONDITIONS = ['new', 'like_new', 'good', 'fair', 'poor'];
@@ -119,6 +119,15 @@ export default function CreateListing() {
 
   const activeFilterKeys = getActiveFilterKeys(form.category, form.subcategory);
   const activeSubcategories = SUBCATEGORIES[form.category] || [];
+  const isFreeStuff = form.category === 'other' && form.subcategory === 'free_stuff';
+  const isRentalListing = isMonthlyRental(form);
+
+  // Rentals are priced per month, not as a one-time bid -- fixed-price only.
+  useEffect(() => {
+    if (isRentalListing && form.listing_type !== 'fixed') {
+      setForm(f => ({ ...f, listing_type: 'fixed' }));
+    }
+  }, [isRentalListing, form.listing_type]);
 
   const handleImagesAdded = (urls) => {
     setForm(f => ({ ...f, images: [...f.images, ...urls] }));
@@ -135,7 +144,9 @@ export default function CreateListing() {
     if (activeFilterKeys.includes('brand') && !form.brand.trim()) errors.push('brand');
     if (!form.category) errors.push('category');
     if (form.category && activeSubcategories.length > 0 && !form.subcategory) errors.push('subcategory');
-    if (!form.price || parseFloat(form.price) <= 0) errors.push(form.listing_type === 'auction' ? 'startingPrice' : 'price');
+    if (form.price === '' || parseFloat(form.price) < 0 || (!isFreeStuff && parseFloat(form.price) <= 0)) {
+      errors.push(form.listing_type === 'auction' ? 'startingPrice' : 'price');
+    }
     if (!form.location) errors.push('location');
     if (form.images.length === 0) errors.push('images');
     return errors;
@@ -258,7 +269,7 @@ export default function CreateListing() {
           <Label className="mb-2 block">{t('create.listingType')}</Label>
           <Tabs value={form.listing_type} onValueChange={(v) => setForm(f => ({ ...f, listing_type: v }))}>
             <TabsList className="w-full">
-              <TabsTrigger value="auction" className="flex-1 gap-2">
+              <TabsTrigger value="auction" disabled={isRentalListing} className="flex-1 gap-2">
                 <Gavel className="w-4 h-4" />
                 {t('create.auctionType')}
               </TabsTrigger>
@@ -268,6 +279,11 @@ export default function CreateListing() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
+          {isRentalListing && (
+            <p className="text-xs text-muted-foreground mt-1.5">
+              {t('create_extra.rentalsFixedPriceOnly')}
+            </p>
+          )}
         </div>
 
         {/* Title */}
@@ -424,7 +440,11 @@ export default function CreateListing() {
 
         {/* Price */}
         <div>
-          <Label>{form.listing_type === 'auction' ? t('create.startingPrice') : t('create.price')} *</Label>
+          <Label>
+            {form.listing_type === 'auction' ? t('create.startingPrice') : t('create.price')}
+            {isRentalListing && ` (${t('common.perMonth')})`}
+            {' *'}
+          </Label>
           <div className="relative mt-1.5">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
             <Input

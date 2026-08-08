@@ -22,7 +22,7 @@ import DeleteListingModal from '@/components/listings/DeleteListingModal';
 import StarRatingDisplay from '@/components/reviews/StarRatingDisplay';
 import { useUserRating } from '@/lib/useUserRating';
 import { cn } from '@/lib/utils';
-import { getActiveFilterKeys, normalizeCategory } from '@/lib/categories';
+import { getActiveFilterKeys, normalizeCategory, isMonthlyRental } from '@/lib/categories';
 import { toast } from 'sonner';
 
 export default function ListingDetail() {
@@ -137,7 +137,23 @@ export default function ListingDetail() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'bids', filter: `listing_id=eq.${listingId}` },
-        () => {
+        (payload) => {
+          // Someone else just bid higher than the best bid we had on record for
+          // this listing -- most often an auto-bidder firing right after our own
+          // bid lands, before the "you're the highest bidder" sheet even closes.
+          // Surface it immediately instead of leaving that sheet's claim stale.
+          const newBid = payload?.new;
+          if (user?.id && newBid && newBid.bidder_id !== user.id) {
+            const newAmt = typeof newBid.amount === 'number' ? newBid.amount : Number(newBid.amount);
+            const priorBids = queryClient.getQueryData(['bids', listingId]) || [];
+            const myPriorBest = priorBids.reduce((max, b) => (
+              b.bidder_id === user.id && Number(b.amount) > max ? Number(b.amount) : max
+            ), 0);
+            if (myPriorBest > 0 && Number.isFinite(newAmt) && newAmt > myPriorBest) {
+              toast.error(t('bid_panel.youveBeenOutbid'));
+            }
+          }
+
           queryClient.invalidateQueries({ queryKey: ['bids', listingId] });
           queryClient.invalidateQueries({ queryKey: ['listing', listingId] });
         }
@@ -150,13 +166,14 @@ export default function ListingDetail() {
       supabase.removeChannel(listingChannel)
       supabase.removeChannel(bidsChannel)
     };
-  }, [listingId, isValidUuid, queryClient]);
+  }, [listingId, isValidUuid, queryClient, user?.id, t]);
 
   // Inject OG meta tags for social preview
   useEffect(() => {
     if (!listing) return;
     const price = listing.current_bid || listing.price;
-    const description = `${listing.listing_type === 'auction' ? t('listing.auction') : t('listing.buyNow')} · €${price?.toFixed(2)} · ${listing.description?.slice(0, 120) || ''}`;
+    const priceSuffix = isMonthlyRental(listing) ? t('common.perMonth') : '';
+    const description = `${listing.listing_type === 'auction' ? t('listing.auction') : t('listing.buyNow')} · €${price?.toFixed(2)}${priceSuffix} · ${listing.description?.slice(0, 120) || ''}`;
     const image = listing.images?.[0] || '';
 
     const setMeta = (prop, content, attr = 'property') => {
@@ -408,7 +425,7 @@ export default function ListingDetail() {
                     : t('listing.fixed')}
                 </p>
                 <p className="text-2xl sm:text-3xl font-display font-bold">
-                  {t('common.eur')}{(isAuction ? (listing.current_bid || listing.price) : listing.price)?.toFixed(2)}
+                  {t('common.eur')}{(isAuction ? (listing.current_bid || listing.price) : listing.price)?.toFixed(2)}{isMonthlyRental(listing) && t('common.perMonth')}
                 </p>
                 {isAuction && (
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -522,7 +539,7 @@ export default function ListingDetail() {
                   className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-12 text-lg font-semibold gap-2"
                 >
                   <ShoppingCart className="w-5 h-5" />
-                  {t('listing.buyNow')} — {t('common.eur')}{listing.price?.toFixed(2)}
+                  {t('listing.buyNow')} — {t('common.eur')}{listing.price?.toFixed(2)}{isMonthlyRental(listing) && t('common.perMonth')}
                 </Button>
               )}
             </>

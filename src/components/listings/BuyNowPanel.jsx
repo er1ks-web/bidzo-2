@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import { isMonthlyRental } from '@/lib/categories';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -136,6 +137,7 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
 
   const [descBeforeTitle, descAfterTitle] = t('buy_now_panel.confirmDesc').split('{title}');
   const [descMiddle, descAfterAmount] = descAfterTitle.split('{amount}');
+  const perMonthSuffix = isMonthlyRental(listing) ? t('common.perMonth') : '';
 
   return (
     <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
@@ -145,7 +147,7 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
           <span className="text-sm font-semibold text-foreground">{t('buy_now_panel.title')}</span>
         </div>
         <span className="text-lg font-bold font-display text-foreground">
-          €{listing.buy_now_price?.toFixed(2)}
+          €{listing.buy_now_price?.toFixed(2)}{perMonthSuffix}
         </span>
       </div>
       <p className="text-xs text-muted-foreground">
@@ -159,7 +161,7 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
             disabled={isSubmitting}
           >
             <Zap className="w-4 h-4" />
-            {isSubmitting ? t('buy_now_panel.processing') : t('buy_now_panel.buyNowFor').replace('{amount}', listing.buy_now_price?.toFixed(2))}
+            {isSubmitting ? t('buy_now_panel.processing') : t('buy_now_panel.buyNowFor').replace('{amount}', `${listing.buy_now_price?.toFixed(2)}${perMonthSuffix}`)}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
@@ -167,7 +169,7 @@ export default function BuyNowPanel({ listing, user, onSuccess }) {
             <AlertDialogTitle>{t('buy_now_panel.confirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
               {descBeforeTitle}<strong>{listing.title}</strong>{descMiddle}
-              <strong>€{listing.buy_now_price?.toFixed(2)}</strong>{descAfterAmount}
+              <strong>€{listing.buy_now_price?.toFixed(2)}{perMonthSuffix}</strong>{descAfterAmount}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

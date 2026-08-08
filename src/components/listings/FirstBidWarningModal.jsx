@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/lib/i18n.jsx';
 
 export default function FirstBidWarningModal({ isOpen, onConfirm, onCancel }) {
+  const { t } = useI18n();
   const [isChecked, setIsChecked] = useState(false);
 
   return (
@@ -13,31 +15,36 @@ export default function FirstBidWarningModal({ isOpen, onConfirm, onCancel }) {
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
               <div>
-                <h2 className="font-bold text-lg text-foreground">Bidding is a commitment</h2>
+                <h2 className="font-bold text-lg text-foreground">{t('first_bid_warning.title')}</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  By placing a bid, you confirm that you are prepared to complete the purchase if you win. Repeated unpaid or ignored winning bids may lead to account restrictions or suspension.
+                  {t('first_bid_warning.body')}
                 </p>
               </div>
             </div>
 
             <div className="bg-muted rounded-lg p-3 space-y-2 text-sm text-muted-foreground">
-              <p>• Only bid if you're willing and able to buy if you win</p>
-              <p>• Winning bids are binding commitments</p>
-              <p>• Repeatedly backing out may restrict your account</p>
+              <p>• {t('first_bid_warning.bullet1')}</p>
+              <p>• {t('first_bid_warning.bullet2')}</p>
+              <p>• {t('first_bid_warning.bullet3')}</p>
             </div>
 
-            <div className="flex items-start gap-3">
+            {/* The whole row is the tap target, not just the 16px checkbox glyph --
+                easy to miss precisely on a phone otherwise. */}
+            <label
+              htmlFor="acknowledge"
+              className="flex items-start gap-3 rounded-lg p-2 -m-2 cursor-pointer active:bg-muted/60 transition-colors"
+            >
               <input
                 type="checkbox"
                 id="acknowledge"
                 checked={isChecked}
                 onChange={(e) => setIsChecked(e.target.checked)}
-                className="mt-1 cursor-pointer"
+                className="mt-1 w-5 h-5 shrink-0 cursor-pointer accent-accent"
               />
-              <label htmlFor="acknowledge" className="text-sm cursor-pointer text-foreground">
-                I understand and confirm that I am prepared to complete this purchase if I win
-              </label>
-            </div>
+              <span className="text-sm cursor-pointer text-foreground">
+                {t('first_bid_warning.checkboxLabel')}
+              </span>
+            </label>
 
             <div className="flex gap-3 pt-2">
               <Button
@@ -45,7 +52,7 @@ export default function FirstBidWarningModal({ isOpen, onConfirm, onCancel }) {
                 className="flex-1"
                 onClick={onCancel}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 disabled={!isChecked}
@@ -55,7 +62,7 @@ export default function FirstBidWarningModal({ isOpen, onConfirm, onCancel }) {
                   setIsChecked(false);
                 }}
               >
-                Place Bid
+                {t('bid_panel.placeBid')}
               </Button>
             </div>
           </div>

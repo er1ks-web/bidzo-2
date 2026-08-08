@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '@/lib/i18n.jsx';
 import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
+import { isMonthlyRental } from '@/lib/categories';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=300&fit=crop';
 
@@ -197,7 +198,7 @@ export default function Favourites() {
                       <div className="flex items-center gap-4">
                         <div>
                           <p className="text-xs text-muted-foreground">{isAuction && listing.bid_count > 0 ? t('hero_card.currentBid') : t('favourites_extra.price')}</p>
-                          <p className="font-bold text-base font-display">€{displayPrice?.toFixed(2)}</p>
+                          <p className="font-bold text-base font-display">€{displayPrice?.toFixed(2)}{isMonthlyRental(listing) && t('common.perMonth')}</p>
                         </div>
                         {isAuction && (
                           <span className="text-xs text-muted-foreground">{listing.bid_count || 0} {t('listing.bids')}</span>
