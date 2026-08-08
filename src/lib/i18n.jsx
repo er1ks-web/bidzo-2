@@ -775,6 +775,12 @@ const translations = {
         ]},
       ],
     },
+    presence: {
+      onlineNow: 'Tiešsaistē tagad',
+      lastSeenMinutes: 'Pēdējoreiz aktīvs pirms {n} min',
+      lastSeenHours: 'Pēdējoreiz aktīvs pirms {n} st',
+      lastSeenDays: 'Pēdējoreiz aktīvs pirms {n} d',
+    },
   },
   en: {
     nav: {
@@ -1550,6 +1556,12 @@ const translations = {
         ]},
       ],
     },
+    presence: {
+      onlineNow: 'Online now',
+      lastSeenMinutes: 'Last seen {n}m ago',
+      lastSeenHours: 'Last seen {n}h ago',
+      lastSeenDays: 'Last seen {n}d ago',
+    },
   },
   ru: {
     nav: {
@@ -2324,6 +2336,12 @@ const translations = {
           { ul: ['понимает принцип работы Платформы', 'принимает все риски, связанные со сделками', 'несёт полную ответственность за свои действия'] },
         ]},
       ],
+    },
+    presence: {
+      onlineNow: 'В сети сейчас',
+      lastSeenMinutes: 'Был(а) в сети {n} мин. назад',
+      lastSeenHours: 'Был(а) в сети {n} ч. назад',
+      lastSeenDays: 'Был(а) в сети {n} дн. назад',
     },
   },
 };

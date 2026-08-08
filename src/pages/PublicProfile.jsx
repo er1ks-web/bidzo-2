@@ -9,6 +9,8 @@ import StarRatingDisplay from '@/components/reviews/StarRatingDisplay';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
+import OnlineDot from '@/components/profile/OnlineDot';
+import { formatLastSeen } from '@/lib/presence';
 
 export default function PublicProfile() {
   const { t } = useI18n();
@@ -195,7 +197,7 @@ export default function PublicProfile() {
 
       {/* Profile header */}
       <div className="bg-card rounded-xl border p-6 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
-        <div className="shrink-0">
+        <div className="relative shrink-0">
           {profile?.profile_picture_url ? (
             <img
               src={profile.profile_picture_url}
@@ -207,10 +209,15 @@ export default function PublicProfile() {
               <User className="w-9 h-9 text-primary" />
             </div>
           )}
+          <OnlineDot lastSeenAt={profile?.last_seen_at} className="w-4 h-4 border-[3px]" />
         </div>
 
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-display font-bold truncate">{displayName}</h1>
+
+          {profile?.last_seen_at && (
+            <p className="text-xs text-muted-foreground mt-0.5">{formatLastSeen(profile.last_seen_at, t)}</p>
+          )}
 
           {/* Star rating next to name */}
           {avgRating && (

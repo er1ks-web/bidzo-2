@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useI18n } from '@/lib/i18n.jsx';
+import { formatLastSeen } from '@/lib/presence';
 import { supabase } from '@/supabase'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -169,7 +170,7 @@ export default function Messages() {
     if (!ids.length) return;
     const { data, error } = await supabase
       .from('public_profiles')
-      .select('id, username, profile_picture_url')
+      .select('id, username, profile_picture_url, last_seen_at')
       .in('id', ids)
 
     if (error) {
@@ -181,7 +182,7 @@ export default function Messages() {
     const map = {}
     rows.forEach((p) => {
       if (!p?.id) return
-      map[p.id] = { email: null, username: p.username, avatar: p.profile_picture_url }
+      map[p.id] = { email: null, username: p.username, avatar: p.profile_picture_url, lastSeenAt: p.last_seen_at }
     })
     setProfileMap(prev => ({ ...prev, ...map }));
   };
@@ -195,6 +196,7 @@ export default function Messages() {
   };
 
   const getAvatar = (userId) => profileMap[userId]?.avatar || null;
+  const getLastSeen = (userId) => profileMap[userId]?.lastSeenAt || null;
 
   // 2. Subscribe to ALL message changes
   useEffect(() => {
@@ -639,9 +641,12 @@ export default function Messages() {
                 )}
                 <Link
                   to={`/seller/${encodeURIComponent(recipientId || recipientEmail)}`}
-                  className="font-semibold text-sm hover:text-accent transition-colors flex-1"
+                  className="flex-1 min-w-0 hover:text-accent transition-colors"
                 >
-                  {activeRecipientDisplay}
+                  <p className="font-semibold text-sm truncate">{activeRecipientDisplay}</p>
+                  {getLastSeen(recipientId) && (
+                    <p className="text-[11px] text-muted-foreground">{formatLastSeen(getLastSeen(recipientId), t)}</p>
+                  )}
                 </Link>
                 {activeConv && (
                   <AlertDialog>

@@ -98,6 +98,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // "Online" presence heartbeat -- softer than a live socket connection:
+  // touch profiles.last_seen_at periodically while this tab is visible, and
+  // OnlineDot/formatLastSeen (lib/presence.js) treat anything within the
+  // last couple of minutes as "online now".
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const touch = () => {
+      if (document.visibilityState !== 'visible') return;
+      supabase
+        .from('profiles')
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq('id', user.id)
+        .then(({ error }) => {
+          if (error) console.log(error);
+        });
+    };
+
+    touch();
+    const interval = setInterval(touch, 60 * 1000);
+    const onVisibilityChange = () => touch();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [user?.id]);
+
   const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);

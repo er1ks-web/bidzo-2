@@ -13,6 +13,7 @@ import AuctionTimer from '@/components/listings/AuctionTimer';
 import BidPanel from '@/components/listings/BidPanel.jsx';
 import BuyNowPanel from '@/components/listings/BuyNowPanel';
 import BidHistory from '@/components/listings/BidHistory';
+import OnlineDot from '@/components/profile/OnlineDot';
 import WatchButton from '@/components/listings/WatchButton';
 import ShareButton from '@/components/listings/ShareButton';
 import AcceptBidButton from '@/components/listings/AcceptBidButton';
@@ -91,7 +92,7 @@ export default function ListingDetail() {
 
         const { data: profiles, error: profilesError } = await supabase
           .from('public_profiles')
-          .select('id, username')
+          .select('id, username, last_seen_at')
           .in('id', bidderIds)
 
         if (profilesError) console.log(profilesError)
@@ -104,6 +105,7 @@ export default function ListingDetail() {
             ...b,
             bidder_name: display || b.bidder_name,
             bidder_username: display,
+            bidder_last_seen: p?.last_seen_at || null,
           }
         })
       } catch (e) {
@@ -561,12 +563,13 @@ export default function ListingDetail() {
               to={`/seller/${encodeURIComponent(listing.seller_id)}`}
               className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
             >
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="relative w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 {sellerProfile?.profile_picture_url ? (
                   <img src={sellerProfile.profile_picture_url} alt={listing.seller_name} className="w-10 h-10 rounded-full object-cover" />
                 ) : (
                   <User className="w-5 h-5 text-primary" />
                 )}
+                <OnlineDot lastSeenAt={sellerProfile?.last_seen_at} />
               </div>
               <div>
                 <p className="font-semibold group-hover:text-accent transition-colors">

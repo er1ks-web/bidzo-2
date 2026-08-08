@@ -2,6 +2,7 @@ import { useI18n } from '@/lib/i18n.jsx';
 import { format } from 'date-fns';
 import { User, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
+import OnlineDot from '@/components/profile/OnlineDot';
 
 export default function BidHistory({ bids, currentUserEmail, currentUserId }) {
   const { t } = useI18n();
@@ -52,8 +53,9 @@ export default function BidHistory({ bids, currentUserEmail, currentUserId }) {
               ].join(' ')}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isUserLatest ? 'bg-accent/20' : 'bg-primary/10'}`}>
+                <div className={`relative w-8 h-8 rounded-full flex items-center justify-center ${isUserLatest ? 'bg-accent/20' : 'bg-primary/10'}`}>
                   <User className={`w-4 h-4 ${isUserLatest ? 'text-accent' : 'text-primary'}`} />
+                  <OnlineDot lastSeenAt={bid.bidder_last_seen} />
                 </div>
                 <div>
                   <p className={`font-medium text-sm ${isUserLatest ? 'text-accent' : ''}`}>
