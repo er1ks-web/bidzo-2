@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/supabase'
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n.jsx';
 
 export default function WatchButton({ listingId, user, requireLogin, className, showCount = false, watcherCount = 0 }) {
+  const { t } = useI18n();
   const [watchRecord, setWatchRecord] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +33,7 @@ export default function WatchButton({ listingId, user, requireLogin, className, 
   const isWatching = !!watchRecord;
 
   const toggle = async () => {
-    if (!user) { requireLogin('Log in to add items to your watchlist'); return; }
+    if (!user) { requireLogin(t('listing_extra.loginToWatch')); return; }
     setLoading(true);
     if (isWatching) {
       const { error } = await supabase

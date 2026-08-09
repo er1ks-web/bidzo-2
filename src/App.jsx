@@ -94,10 +94,16 @@ function App() {
               richColors
               position="bottom-center"
               toastOptions={{
+                // Same card language as the "You're the highest bidder" bottom
+                // sheet (BidSuccessSheet.jsx): rounded-2xl, deep shadow, #1A1A1A
+                // background, bold title. Success/error keep their own colors
+                // (green/red) so they stay distinguishable -- only the shape
+                // and depth are unified, not the semantics.
                 classNames: {
                   toast:
-                    '!bg-black border border-white/10 shadow-lg data-[type=success]:!bg-black data-[type=error]:!bg-black data-[type=success]:!border-emerald-500 data-[type=success]:border-2 data-[type=success]:!text-emerald-400 data-[type=success]:[&_*]:!text-emerald-400 !text-white',
-                  description: 'text-white/70 data-[type=success]:!text-emerald-300',
+                    '!rounded-2xl !bg-[#1A1A1A] border border-white/10 !shadow-2xl data-[type=success]:!bg-[#1A1A1A] data-[type=error]:!bg-[#1A1A1A] data-[type=success]:!border-emerald-500 data-[type=success]:!border-2 data-[type=success]:!text-emerald-400 data-[type=success]:[&_*]:!text-emerald-400 data-[type=error]:!border-destructive data-[type=error]:!border-2 data-[type=error]:!text-destructive data-[type=error]:[&_*]:!text-destructive !text-white',
+                  title: '!font-bold',
+                  description: 'text-white/70 data-[type=success]:!text-emerald-300 data-[type=error]:!text-destructive/80',
                   actionButton: 'bg-emerald-600 text-white',
                   cancelButton: 'bg-white/10 text-white',
                 },

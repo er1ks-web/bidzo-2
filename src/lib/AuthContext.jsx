@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/supabase'
+import { toast } from 'sonner';
 
 const AuthContext = createContext(null);
 
@@ -152,6 +153,11 @@ export const AuthProvider = ({ children }) => {
       if (prev?.type === next.type && prev?.message === next.message) return prev
       return next
     });
+
+    // authError above isn't read/rendered anywhere -- this was previously a
+    // silent no-op. Surface it the same way every other notification on the
+    // site does, through the shared sonner Toaster in App.jsx.
+    toast.error(next.message);
 
     return Promise.resolve();
   }, []);
