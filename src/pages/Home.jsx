@@ -86,12 +86,45 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div>
-        <div className="h-64 bg-primary animate-pulse" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {[1,2,3,4].map(i => <Skeleton key={i} className="aspect-[4/3] rounded-xl" />)}
+      <div className={pageBackgroundClassName} style={pageBackgroundStyle}>
+        {/* Mirrors HeroSection's own min-height (sm:min-h-[calc(100vh-65px)])
+            so swapping in the real page doesn't shift anything already
+            visible on screen -- this mismatch was the single biggest
+            contributor to a 0.94 CLS score (see HeroSection.jsx). */}
+        <div className="min-h-[520px] sm:min-h-[calc(100vh-65px)] flex items-center">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-32 rounded-full" />
+                <Skeleton className="h-12 sm:h-16 w-full max-w-lg rounded-lg" />
+                <Skeleton className="h-5 w-2/3 max-w-md rounded" />
+                <div className="flex gap-3 pt-2">
+                  <Skeleton className="h-11 w-36 rounded-lg" />
+                  <Skeleton className="h-11 w-36 rounded-lg" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="aspect-[16/9] rounded-xl" />)}
+              </div>
+            </div>
           </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-10">
+          {[1, 2].map((section) => (
+            <div key={section}>
+              <Skeleton className="h-7 w-48 rounded mb-5" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="aspect-[4/3] rounded-xl" />
+                    <Skeleton className="h-4 w-3/4 rounded" />
+                    <Skeleton className="h-5 w-1/2 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

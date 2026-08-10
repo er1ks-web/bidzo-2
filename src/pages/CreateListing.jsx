@@ -28,6 +28,10 @@ const DURATIONS = [
   { value: '14', label: '14 days' },
 ];
 const MAX_IMAGES = 8;
+// Sane ceiling for a listing's price -- comfortably above any real Latvian
+// real-estate/vehicle listing, but blocks garbage input like typing "1e80"
+// into the number field (which HTML happily accepts as scientific notation).
+const MAX_LISTING_PRICE = 10_000_000;
 
 export default function CreateListing() {
   const { t } = useI18n();
@@ -146,6 +150,11 @@ export default function CreateListing() {
     if (form.category && activeSubcategories.length > 0 && !form.subcategory) errors.push('subcategory');
     if (form.price === '' || parseFloat(form.price) < 0 || (!isFreeStuff && parseFloat(form.price) <= 0)) {
       errors.push(form.listing_type === 'auction' ? 'startingPrice' : 'price');
+    } else if (parseFloat(form.price) > MAX_LISTING_PRICE) {
+      errors.push('priceTooHigh');
+    }
+    if (form.buy_now_price && parseFloat(form.buy_now_price) > MAX_LISTING_PRICE && !errors.includes('priceTooHigh')) {
+      errors.push('priceTooHigh');
     }
     if (!form.location) errors.push('location');
     if (form.images.length === 0) errors.push('images');
@@ -451,9 +460,10 @@ export default function CreateListing() {
               type="number"
               step="0.01"
               min="0"
+              max={MAX_LISTING_PRICE}
               value={form.price}
               onChange={(e) => { setForm(f => ({ ...f, price: e.target.value })); setValidationErrors([]); }}
-              className={cn("pl-7", (validationErrors.includes('price') || validationErrors.includes('startingPrice')) && "border-destructive ring-1 ring-destructive")}
+              className={cn("pl-7", (validationErrors.includes('price') || validationErrors.includes('startingPrice') || validationErrors.includes('priceTooHigh')) && "border-destructive ring-1 ring-destructive")}
             />
           </div>
         </div>
@@ -471,10 +481,11 @@ export default function CreateListing() {
                  type="number"
                  step="0.01"
                  min="0"
+                 max={MAX_LISTING_PRICE}
                  value={form.buy_now_price}
-                 onChange={(e) => setForm(f => ({ ...f, buy_now_price: e.target.value }))}
+                 onChange={(e) => { setForm(f => ({ ...f, buy_now_price: e.target.value })); setValidationErrors([]); }}
                  placeholder={t('create_extra.leaveEmpty')}
-                 className="pl-7"
+                 className={cn("pl-7", validationErrors.includes('priceTooHigh') && "border-destructive ring-1 ring-destructive")}
                />
              </div>
            </div>
@@ -562,7 +573,9 @@ export default function CreateListing() {
               {validationErrors.map((err, i) => (
                 <li key={i} className="text-sm text-destructive flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
-                  {t(`create_extra.errors.${err}`)}
+                  {err === 'priceTooHigh'
+                    ? t('create_extra.errors.priceTooHigh').replace('{max}', MAX_LISTING_PRICE.toLocaleString())
+                    : t(`create_extra.errors.${err}`)}
                 </li>
               ))}
             </ul>
