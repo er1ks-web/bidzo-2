@@ -65,7 +65,7 @@ export default function Footer() {
               <a href="https://www.instagram.com/bidzo.lv" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-yellow-500/20 hover:text-yellow-400 transition-colors">
                 <Instagram className="w-4 h-4" />
               </a>
-              <a href="https://www.tiktok.com" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-yellow-500/20 hover:text-yellow-400 transition-colors">
+              <a href="https://www.tiktok.com/@bidzo.lv?lang=en" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-yellow-500/20 hover:text-yellow-400 transition-colors">
                 {/* TikTok icon */}
                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
                   <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.17 8.17 0 0 0 4.78 1.52V6.75a4.85 4.85 0 0 1-1.01-.06z"/>
