@@ -31,6 +31,9 @@ import Privacy from '@/pages/Privacy';
 import AuthCallback from '@/pages/AuthCallback';
 import ResetPassword from '@/pages/ResetPassword';
 import Settings from '@/pages/Settings';
+import Menu from '@/pages/Menu';
+import AccountDeletion from '@/pages/AccountDeletion';
+import { isNativeApp, hideSplash } from '@/lib/native';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 
 const AuthenticatedApp = () => {
@@ -40,6 +43,11 @@ const AuthenticatedApp = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  // In the app, swap the launch screen straight for the first real page.
+  useEffect(() => {
+    if (!isLoadingPublicSettings) hideSplash();
+  }, [isLoadingPublicSettings]);
 
   if (isLoadingPublicSettings) {
     return (
@@ -68,6 +76,8 @@ const AuthenticatedApp = () => {
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/ending-soon" element={<EndingSoon />} />
+        <Route path="/menu" element={<Menu />} />
+        <Route path="/account-deletion" element={<AccountDeletion />} />
         {/* Protected pages — auth required */}
         <Route path="/create" element={<ProtectedRoute><CreateListing /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
@@ -94,6 +104,8 @@ function App() {
             <Toaster
               richColors
               position="bottom-center"
+              // Keep toasts clear of the app's bottom tab bar.
+              mobileOffset={isNativeApp ? { bottom: 88 } : undefined}
               toastOptions={{
                 // Same card language as the "You're the highest bidder" bottom
                 // sheet (BidSuccessSheet.jsx): rounded-2xl, deep shadow, #1A1A1A

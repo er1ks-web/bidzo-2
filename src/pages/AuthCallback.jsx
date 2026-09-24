@@ -12,6 +12,17 @@ export default function AuthCallback() {
       try {
         const params = new URLSearchParams(window.location.search)
         const hasOAuthCode = !!params.get('code')
+        const tokenHash = params.get('token_hash')
+
+        // 0) Link from the Confirm sign up email template
+        //    ({{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email).
+        //    Unlike the PKCE ?code link, this works in any browser, e.g. signed up in the
+        //    app but opened the email in Chrome.
+        if (tokenHash) {
+          const { error: verifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: params.get('type') || 'email' })
+          if (verifyError) console.log(verifyError)
+          window.history.replaceState({}, document.title, window.location.pathname)
+        }
         const hasAccessTokenHash = typeof window.location.hash === 'string' && window.location.hash.includes('access_token=')
 
         // 1) Implicit flow (tokens in URL hash)

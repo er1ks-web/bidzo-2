@@ -19,7 +19,26 @@ export default function ResetPassword() {
 
     const init = async () => {
       try {
-        // Password recovery flow often lands here with tokens in the URL hash
+        const params = new URLSearchParams(window.location.search)
+        const tokenHash = params.get('token_hash')
+        const code = params.get('code')
+
+        // 1) Link from the Reset Password email template
+        //    ({{ .SiteURL }}/reset-password?token_hash={{ .TokenHash }}&type=recovery).
+        //    Works in any browser or device, unlike the PKCE ?code link below, which only
+        //    works in the browser that requested the reset (not e.g. app -> Gmail -> Chrome).
+        if (tokenHash) {
+          const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: params.get('type') || 'recovery' })
+          if (error) console.log(error)
+          window.history.replaceState({}, document.title, window.location.pathname)
+        } else if (code) {
+          // 2) PKCE link (same browser only). The client may already have exchanged it on load.
+          const { error } = await supabase.auth.exchangeCodeForSession(code)
+          if (error) console.log(error)
+          window.history.replaceState({}, document.title, window.location.pathname)
+        }
+
+        // 3) Older implicit flow: tokens in the URL hash
         const hasAccessTokenHash = typeof window.location.hash === 'string' && window.location.hash.includes('access_token=')
 
         if (hasAccessTokenHash) {
@@ -83,9 +102,10 @@ export default function ResetPassword() {
       return
     }
 
-    toast.success('Password updated. Please log in.')
+    // The reset link already signed the user in, so continue straight into the account.
+    toast.success('Password updated')
     setLoading(false)
-    navigate('/login')
+    navigate('/profile')
   }
 
   if (checking) {

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n.jsx';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Gavel, Clock, TrendingUp, Tag, ShieldCheck, Bell, ChevronDown } from 'lucide-react';
+import { ArrowRight, Gavel, TrendingUp, Tag, ShieldCheck, Bell, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import AuctionTimer from '@/components/listings/AuctionTimer';
 
@@ -55,23 +55,16 @@ function HeroAuctionCard({ listing, index }) {
 
         <div className="p-2">
           <p className="text-foreground font-medium text-xs leading-tight line-clamp-1 mb-1">{listing.title}</p>
-          <div className="flex items-center justify-between gap-1">
-            <div>
-              <p className="text-foreground/50 text-[9px] uppercase tracking-wide mb-0.5">
-                {listing.current_bid ? t('hero_card.currentBid') : t('hero_card.startsAt')}
-              </p>
-              <p className="text-accent font-bold text-sm font-display">€{currentPrice?.toFixed(2)}</p>
+          <p className="text-foreground/50 text-[9px] uppercase tracking-wide mb-0.5">
+            {listing.current_bid ? t('hero_card.currentBid') : t('hero_card.startsAt')}
+          </p>
+          <p className="text-accent font-bold text-sm font-display">€{currentPrice?.toFixed(2)}</p>
+          {listing.auction_end &&
+          <div className="mt-1.5 pt-1.5 border-t border-border/50">
+              <p className="text-foreground/50 text-[9px] mb-0.5">{t('hero_card.endsIn')}</p>
+              <AuctionTimer endDate={listing.auction_end} compact className="text-xs gap-1" />
             </div>
-            {listing.auction_end &&
-            <div className="text-right">
-                <div className="flex items-center gap-0.5 text-foreground/50 text-[9px] mb-0.5">
-                   <Clock className="w-2 h-2" />
-                   <span>{t('hero_card.endsIn')}</span>
-                 </div>
-                <AuctionTimer endDate={listing.auction_end} compact />
-              </div>
-            }
-          </div>
+          }
         </div>
       </Link>
     </motion.div>);

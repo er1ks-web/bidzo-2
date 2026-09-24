@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import useEmblaCarousel from 'embla-carousel-react';
 import FullscreenImageViewer from './FullscreenImageViewer';
 import { cn } from '@/lib/utils';
 
@@ -12,47 +12,54 @@ export default function ImageGallery({ images = [] }) {
   const [fullscreenIndex, setFullscreenIndex] = useState(0);
 
   const displayImages = images.length > 0 ? images : [PLACEHOLDER];
-  const currentImage = displayImages[currentIndex];
   const hasMultiple = displayImages.length > 1;
 
-  const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % displayImages.length);
-  };
+  // Swipeable main image. Embla ignores the click that ends a drag, so a swipe never opens fullscreen.
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: hasMultiple });
 
-  const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev - 1 + displayImages.length) % displayImages.length);
-  };
+  useEffect(() => {
+    if (!emblaApi) return;
+    const onSelect = () => setCurrentIndex(emblaApi.selectedScrollSnap());
+    emblaApi.on('select', onSelect);
+    return () => emblaApi.off('select', onSelect);
+  }, [emblaApi]);
+
+  const goToNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+  const goToPrevious = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
 
   const openFullscreen = (index) => {
     setFullscreenIndex(index);
     setIsFullscreen(true);
   };
 
-  const handleThumbnailClick = (index) => {
-    setCurrentIndex(index);
+  // Returning from fullscreen lands on the photo the user was last looking at.
+  const closeFullscreen = (lastIndex) => {
+    setIsFullscreen(false);
+    if (typeof lastIndex === 'number') emblaApi?.scrollTo(lastIndex, true);
   };
 
   return (
     <>
       <div className="space-y-3 sm:space-y-4">
-        {/* Main image - clickable for fullscreen */}
-        <div
-          className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-muted cursor-pointer group"
-          onClick={() => openFullscreen(currentIndex)}
-        >
-          <motion.img
-            key={currentImage}
-            src={currentImage}
-            alt={`Listing image ${currentIndex + 1}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+        {/* Main image - swipe to browse, tap for fullscreen */}
+        <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-muted group">
+          <div ref={emblaRef} className="h-full overflow-hidden cursor-pointer">
+            <div className="flex h-full touch-pan-y">
+              {displayImages.map((img, idx) => (
+                <div key={idx} className="relative flex-[0_0_100%] min-w-0 h-full" onClick={() => openFullscreen(idx)}>
+                  <img
+                    src={img}
+                    alt={`Listing image ${idx + 1}`}
+                    draggable={false}
+                    className="w-full h-full object-cover select-none"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
 
-          {/* Fullscreen hint overlay */}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+          {/* Fullscreen hint overlay (desktop hover) */}
+          <div className="pointer-events-none absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
             <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               <div className="bg-black/50 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
                 Click to expand
@@ -62,7 +69,7 @@ export default function ImageGallery({ images = [] }) {
 
           {/* Image counter */}
           {hasMultiple && (
-            <div className="absolute bottom-3 right-3 bg-black/60 text-white px-2.5 py-1 rounded-lg text-xs font-medium">
+            <div className="pointer-events-none absolute bottom-3 right-3 bg-black/60 text-white px-2.5 py-1 rounded-lg text-xs font-medium">
               {currentIndex + 1} / {displayImages.length}
             </div>
           )}
@@ -71,10 +78,7 @@ export default function ImageGallery({ images = [] }) {
           {hasMultiple && (
             <>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  goToPrevious();
-                }}
+                onClick={goToPrevious}
                 className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-black/40 text-white hover:bg-black/60 transition-colors hidden sm:flex items-center justify-center"
                 aria-label="Previous image"
               >
@@ -82,10 +86,7 @@ export default function ImageGallery({ images = [] }) {
               </button>
 
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  goToNext();
-                }}
+                onClick={goToNext}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-black/40 text-white hover:bg-black/60 transition-colors hidden sm:flex items-center justify-center"
                 aria-label="Next image"
               >
@@ -95,13 +96,13 @@ export default function ImageGallery({ images = [] }) {
           )}
         </div>
 
-        {/* Thumbnail strip */}
+        {/* Thumbnail strip -- padded so the selected thumbnail's border and scale-up aren't clipped by the scroll container */}
         {hasMultiple && (
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex gap-2 overflow-x-auto p-1.5 -mx-1.5">
             {displayImages.map((img, idx) => (
               <button
                 key={idx}
-                onClick={() => handleThumbnailClick(idx)}
+                onClick={() => emblaApi?.scrollTo(idx)}
                 className={cn(
                   'shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 transition-all duration-200',
                   currentIndex === idx
@@ -125,7 +126,7 @@ export default function ImageGallery({ images = [] }) {
         images={displayImages}
         initialIndex={fullscreenIndex}
         isOpen={isFullscreen}
-        onClose={() => setIsFullscreen(false)}
+        onClose={closeFullscreen}
       />
     </>
   );

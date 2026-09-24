@@ -3,11 +3,12 @@ import { Share2, Check, Copy, Link } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { currentPageUrl } from '@/lib/native';
 
 export default function ShareButton({ listing, className }) {
   const [copied, setCopied] = useState(false);
 
-  const getShareUrl = () => window.location.href;
+  const getShareUrl = () => currentPageUrl();
 
   const getShareData = () => ({
     title: listing?.title || 'Auction listing',

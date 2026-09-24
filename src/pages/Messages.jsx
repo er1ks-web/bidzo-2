@@ -12,6 +12,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import FullscreenImageViewer from '@/components/listings/FullscreenImageViewer';
+import { isNativeApp } from '@/lib/native';
+import SwipeToDelete from '@/components/messages/SwipeToDelete';
 import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -482,6 +484,34 @@ export default function Messages() {
     }
   };
 
+  // Swipe-to-delete in the conversation list: which row is slid open, and which
+  // conversation the delete confirmation is for (that row stays slid off meanwhile).
+  const [swipeOpenId, setSwipeOpenId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const deleteConfirmedRef = useRef(false);
+
+  const askDeleteChat = (conv) => {
+    setDeleteTarget(conv);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteDialogChange = (open) => {
+    setDeleteDialogOpen(open);
+    if (!open && !deleteConfirmedRef.current) {
+      setDeleteTarget(null);
+      setSwipeOpenId(null);
+    }
+  };
+
+  const confirmDeleteChat = async () => {
+    deleteConfirmedRef.current = true;
+    await handleDeleteChat(deleteTarget.id);
+    deleteConfirmedRef.current = false;
+    setDeleteTarget(null);
+    setSwipeOpenId(null);
+  };
+
   const handleDeleteChat = async (convId) => {
     // Only hides the conversation from this user's own view -- the other
     // person's copy of these messages is never touched.
@@ -489,7 +519,7 @@ export default function Messages() {
 
     if (error) {
       console.log(error)
-      toast.error('Failed to delete conversation')
+      toast.error(t('messages.deleteChatFailed'))
       return
     }
 
@@ -535,11 +565,24 @@ export default function Messages() {
                 {t('messages.noMessages')}
               </div>
             ) : (
-              convList.map(conv => {
+              <AnimatePresence initial={false}>
+              {convList.map(conv => {
                 const unread = unreadByConv[conv.id] || 0;
                 const displayName = getDisplayName(conv.otherParty, conv.otherPartyName);
                 return (
-                  <div key={conv.id} className="group relative">
+                  <motion.div
+                    key={conv.id}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="group relative"
+                  >
+                    <SwipeToDelete
+                      isOpen={swipeOpenId === conv.id}
+                      isDeleting={deleteTarget?.id === conv.id}
+                      onOpenChange={(open) => setSwipeOpenId(open ? conv.id : null)}
+                      onDelete={() => askDeleteChat({ id: conv.id, name: displayName })}
+                      deleteLabel={t('common.delete')}
+                    >
                     <button
                       onClick={() => {
                         setActiveConv(conv.id);
@@ -587,47 +630,53 @@ export default function Messages() {
                         {format(new Date(conv.lastMessage.created_date), 'MMM d')}
                       </span>
                     </button>
-                    {/* Delete button */}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <button className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This removes the conversation from your inbox. {displayName} will still see their copy of it.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-destructive hover:bg-destructive/90"
-                            onClick={() => handleDeleteChat(conv.id)}
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
+                    </SwipeToDelete>
+                    {/* Desktop: trash icon on hover (phones swipe the row instead) */}
+                    <button
+                      onClick={() => askDeleteChat({ id: conv.id, name: displayName })}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive hidden sm:block"
+                      aria-label={t('common.delete')}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </motion.div>
                 );
-              })
+              })}
+              </AnimatePresence>
             )}
           </div>
         </div>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogChange}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('messages.deleteChatTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('messages.deleteChatBody').replace('{name}', deleteTarget?.name || '')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('messages.deleteChatCancel')}</AlertDialogCancel>
+              <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={confirmDeleteChat}>
+                {t('common.delete')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Chat area -- on mobile, while a conversation is open, this becomes a
             fixed full-screen overlay pinned to the real viewport (below the
             navbar) instead of an inline box with a calculated height. Fixed
             positioning tracks the mobile browser's actual visible viewport,
             including when the on-screen keyboard opens, so the input row
-            can never end up clipped or scrolled out of reach. */}
+            can never end up clipped or scrolled out of reach.
+            In the app it sits under the slim top bar and above the bottom tab bar
+            (z-50 covers the tabs while a conversation is open, like a chat app). */}
         <div className={cn(
           "flex-1 flex flex-col",
-          "fixed inset-x-0 top-[65px] bottom-0 z-40 bg-background rounded-none border-0",
+          isNativeApp
+            ? "fixed inset-x-0 top-14 bottom-0 z-50 bg-background rounded-none border-0"
+            : "fixed inset-x-0 top-[65px] bottom-0 z-40 bg-background rounded-none border-0",
           "sm:static sm:inset-auto sm:z-auto sm:bg-transparent sm:rounded-xl sm:border-0",
           isMobile
             ? (activeConv || recipientEmail ? "flex" : "hidden")
@@ -664,18 +713,18 @@ export default function Messages() {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+                        <AlertDialogTitle>{t('messages.deleteChatTitle')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This removes the conversation from your inbox. {activeRecipientDisplay} will still see their copy of it.
+                          {t('messages.deleteChatBody').replace('{name}', activeRecipientDisplay)}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>{t('messages.deleteChatCancel')}</AlertDialogCancel>
                         <AlertDialogAction
                           className="bg-destructive hover:bg-destructive/90"
                           onClick={() => handleDeleteChat(activeConv)}
                         >
-                          Delete
+                          {t('common.delete')}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

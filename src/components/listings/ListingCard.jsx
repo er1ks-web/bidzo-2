@@ -19,6 +19,7 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
   const isAuction = listing.listing_type === 'auction';
   const hasEnded = isAuction && listing.auction_end && new Date(listing.auction_end) < new Date();
   const isActive = listing.status === 'active' && !hasEnded;
+  const showTimer = isAuction && isActive && !!listing.auction_end;
   const imageUrl = listing.images?.[0] || PLACEHOLDER_IMAGES[index % 3];
   const isOwner = user?.id && listing?.seller_id && user.id === listing.seller_id;
   const status = typeof listing?.status === 'string' ? listing.status : '';
@@ -88,9 +89,9 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
             <h3 className="font-semibold text-sm truncate group-hover:text-accent transition-colors">
               {listing.title}
             </h3>
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
-              <MapPin className="w-3 h-3" />
-              <span>
+            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground min-w-0">
+              <MapPin className="w-3 h-3 shrink-0" />
+              <span className="truncate">
                 {listing.location ? t(`locations.${listing.location}`) : ''}
                 {listing.location_custom ? ` · ${listing.location_custom}` : ''}
               </span>
@@ -114,11 +115,10 @@ export default function ListingCard({ listing, index = 0, user = null, onDelete 
               )}
             </div>
 
-            {isAuction && isActive && listing.auction_end && !hasEnded && (
-              <div className="mt-3 pt-3 border-t border-border/50">
-                <AuctionTimer endDate={listing.auction_end} compact />
-              </div>
-            )}
+            {/* Always takes up the timer row (invisible when there's no countdown) so every card is the same height. */}
+            <div className={cn('mt-3 pt-3 border-t border-border/50', !showTimer && 'invisible')}>
+              {showTimer ? <AuctionTimer endDate={listing.auction_end} compact /> : <span className="block text-sm">&nbsp;</span>}
+            </div>
 
             {listing.seller_id && (
               <div className="mt-2 pt-2 border-t border-border/50">

@@ -524,7 +524,7 @@ export default function Profile() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"

@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/supabase';
 import { toast } from 'sonner';
 import ReportSuccessSheet from '@/components/listings/ReportSuccessSheet';
+import { currentPageUrl } from '@/lib/native';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,7 +59,7 @@ export default function ReportModal({
     const sellerName = sellerNameOverride || listing.seller_name || (sellerEmail ? sellerEmail.split('@')[0] : 'Seller');
     const reporterEmail = authUser.email;
     const listingTitle = listing.title;
-    const listingUrl = window.location.href;
+    const listingUrl = currentPageUrl();
 
     setSubmitting(true);
     try {
