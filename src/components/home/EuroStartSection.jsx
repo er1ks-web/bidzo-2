@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Flame, Clock, Gavel } from 'lucide-react';
+import { ArrowRight, Flame, Gavel } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n.jsx';
 import AuctionTimer from '@/components/listings/AuctionTimer';
@@ -73,10 +73,7 @@ export default function EuroStartSection({ listings = [] }) {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <Clock className="w-3 h-3 shrink-0" />
-                  <AuctionTimer endDate={listing.auction_end} compact />
-                </div>
+                <AuctionTimer endDate={listing.auction_end} compact className="text-xs gap-1" />
               </div>
             </Link>
           </motion.div>

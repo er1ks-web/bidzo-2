@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/supabase'
 import { useI18n } from '@/lib/i18n.jsx';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import HeroSection from '@/components/home/HeroSection';
 import ListingSection from '@/components/home/ListingSection';
 import EndingSoonSection from '@/components/home/EndingSoonSection';
@@ -11,6 +11,7 @@ import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackgrou
 
 export default function Home() {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
 
   const { data: allListings = [], isLoading, isSuccess, isError, error } = useQuery({
   queryKey: ['listings-home'],
@@ -62,6 +63,35 @@ export default function Home() {
       console.error('[Supabase] DB ERROR: failed to fetch listings', error);
     }
   }, [isSuccess, isError, error, allListings]);
+
+  // Live updates: new bids/prices/status changes are patched into the cached list,
+  // new listings trigger a refetch (they need their seller's username), and
+  // deleted rows drop out -- no page refresh needed.
+  useEffect(() => {
+    const patch = (fn) => queryClient.setQueryData(['listings-home'], (prev) => (Array.isArray(prev) ? fn(prev) : prev));
+    const channel = supabase
+      .channel('home-listings')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'listings' }, ({ new: row }) => {
+        if (row?.id) patch((rows) => rows.map((l) => (l.id === row.id ? { ...l, ...row } : l)));
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'listings' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['listings-home'] });
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'listings' }, ({ old }) => {
+        if (old?.id) patch((rows) => rows.filter((l) => l.id !== old.id));
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  // Re-evaluate every 15s so auctions that just ended leave the page on their own.
+  const [, setClock] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setClock((c) => c + 1), 15000);
+    return () => clearInterval(id);
+  }, []);
 
   const now = new Date()
   const activeListings = (Array.isArray(allListings) ? allListings : [])

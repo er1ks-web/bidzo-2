@@ -46,6 +46,7 @@ export default function Footer() {
             <ul className="space-y-2.5 text-sm">
               <li><Link to="/terms" className="hover:text-yellow-400 transition-colors">{t('footer.terms')}</Link></li>
               <li><Link to="/privacy" className="cursor-pointer pointer-events-auto hover:text-yellow-400 transition-colors">{t('footer.privacy')}</Link></li>
+              <li><Link to="/account-deletion" className="hover:text-yellow-400 transition-colors">{t('account_deletion.pageLink')}</Link></li>
             </ul>
           </div>
 

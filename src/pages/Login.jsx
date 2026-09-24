@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useI18n } from '@/lib/i18n.jsx';
 import { supabase } from '@/supabase';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
+import { isNativeApp, siteUrl, NATIVE_AUTH_REDIRECT, openAuthBrowser, onAuthBrowserClosed } from '@/lib/native';
 
 export default function Login() {
   const { t } = useI18n();
@@ -17,6 +18,9 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('login');
 
+  // App: if the user closes the Google sign-in tab without finishing, re-enable the buttons.
+  useEffect(() => onAuthBrowserClosed(() => setLoading(false)), []);
+
   const handlePasswordReset = async () => {
     if (loading) return
     if (!email) {
@@ -26,7 +30,7 @@ export default function Login() {
 
     setLoading(true)
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/reset-password',
+      redirectTo: siteUrl('/reset-password'),
     })
 
     if (error) {
@@ -44,12 +48,19 @@ export default function Login() {
     if (loading) return
     setLoading(true)
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin + '/auth/callback',
+        redirectTo: isNativeApp ? NATIVE_AUTH_REDIRECT : window.location.origin + '/auth/callback',
+        // In the app, open Google in an in-app browser tab instead of navigating the web view.
+        skipBrowserRedirect: isNativeApp,
       },
     })
+
+    if (!error && isNativeApp && data?.url) {
+      await openAuthBrowser(data.url)
+      return
+    }
 
     if (error) {
       console.log(error)
@@ -70,7 +81,7 @@ export default function Login() {
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin + '/auth/callback',
+            emailRedirectTo: siteUrl('/auth/callback'),
           },
         })
       : await supabase.auth.signInWithPassword({

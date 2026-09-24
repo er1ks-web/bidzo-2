@@ -9,6 +9,7 @@ import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackgrou
 import { supabase } from '@/supabase';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import DeleteAccountCard from '@/components/profile/DeleteAccountCard';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -152,6 +153,8 @@ export default function Settings() {
             })}
           </div>
         </div>
+
+        <DeleteAccountCard />
       </div>
     </div>
   );

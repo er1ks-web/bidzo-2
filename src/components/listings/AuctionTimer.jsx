@@ -3,7 +3,8 @@ import { useI18n } from '@/lib/i18n.jsx';
 import { Clock, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export default function AuctionTimer({ endDate, compact = false }) {
+// className only applies to the compact variant (e.g. a smaller text size on small cards).
+export default function AuctionTimer({ endDate, compact = false, className }) {
   const { t } = useI18n();
   const [timeLeft, setTimeLeft] = useState(getTimeLeft());
 
@@ -37,8 +38,9 @@ export default function AuctionTimer({ endDate, compact = false }) {
   if (compact) {
     return (
       <div className={cn(
-        "flex items-center gap-1.5 text-sm font-medium",
-        isUrgent ? "text-destructive" : "text-muted-foreground"
+        "flex items-center gap-1.5 text-sm font-medium whitespace-nowrap",
+        isUrgent ? "text-destructive" : "text-muted-foreground",
+        className
       )}>
         {isUrgent ? <Flame className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
         {timeLeft.days > 0 && <span>{timeLeft.days}{t('time.days')}</span>}

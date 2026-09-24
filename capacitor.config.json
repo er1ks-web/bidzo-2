@@ -1,0 +1,16 @@
+{
+  "appId": "com.bidzo.app",
+  "appName": "Bidzo",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#111111",
+    "adjustMarginsForEdgeToEdge": "force"
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#111111",
+      "overlaysWebView": false
+    }
+  }
+}
