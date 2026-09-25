@@ -1,4 +1,5 @@
 import { Toaster } from 'sonner'
+import { Check, AlertCircle, AlertTriangle, Bell } from 'lucide-react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Analytics } from '@vercel/analytics/react'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -92,6 +93,11 @@ const AuthenticatedApp = () => {
 };
 
 
+// Round coloured badge used as the toast icon (the only thing that differs between toast types).
+function ToastIcon({ className, children }) {
+  return <span className={`w-9 h-9 rounded-full flex items-center justify-center ${className}`}>{children}</span>;
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -102,23 +108,26 @@ function App() {
               <AuthenticatedApp />
             </Router>
             <Toaster
-              richColors
               position="bottom-center"
               // Keep toasts clear of the app's bottom tab bar.
               mobileOffset={isNativeApp ? { bottom: 88 } : undefined}
+              // Every toast uses the same dark card as the in-app notification banner
+              // (InAppNotificationBanner.jsx); success/error/info only differ by the
+              // small coloured icon badge on the left.
+              icons={{
+                success: <ToastIcon className="bg-emerald-500/15 text-emerald-400"><Check className="w-4 h-4" strokeWidth={3} /></ToastIcon>,
+                error: <ToastIcon className="bg-red-500/15 text-red-400"><AlertCircle className="w-4 h-4" strokeWidth={2.5} /></ToastIcon>,
+                warning: <ToastIcon className="bg-amber-500/15 text-amber-400"><AlertTriangle className="w-4 h-4" strokeWidth={2.5} /></ToastIcon>,
+                info: <ToastIcon className="bg-accent/15 text-accent"><Bell className="w-4 h-4" strokeWidth={2.5} /></ToastIcon>,
+              }}
               toastOptions={{
-                // Same card language as the "You're the highest bidder" bottom
-                // sheet (BidSuccessSheet.jsx): rounded-2xl, deep shadow, #1A1A1A
-                // background, bold title. Success/error keep their own colors
-                // (green/red) so they stay distinguishable -- only the shape
-                // and depth are unified, not the semantics.
                 classNames: {
-                  toast:
-                    '!rounded-2xl !bg-[#1A1A1A] border border-white/10 !shadow-2xl data-[type=success]:!bg-[#1A1A1A] data-[type=error]:!bg-[#1A1A1A] data-[type=success]:!border-emerald-500 data-[type=success]:!border-2 data-[type=success]:!text-emerald-400 data-[type=success]:[&_*]:!text-emerald-400 data-[type=error]:!border-destructive data-[type=error]:!border-2 data-[type=error]:!text-destructive data-[type=error]:[&_*]:!text-destructive !text-white',
-                  title: '!font-bold',
-                  description: 'text-white/70 data-[type=success]:!text-emerald-300 data-[type=error]:!text-destructive/80',
-                  actionButton: 'bg-emerald-600 text-white',
-                  cancelButton: 'bg-white/10 text-white',
+                  toast: '!rounded-2xl !bg-[#1A1A1A] !border !border-white/10 !shadow-2xl !shadow-black/50 !text-white !gap-3 !p-3.5',
+                  icon: '!w-9 !h-9 !m-0 shrink-0',
+                  title: '!font-bold !text-white !text-sm',
+                  description: '!text-white/70 !text-sm',
+                  actionButton: '!bg-accent !text-accent-foreground !font-semibold',
+                  cancelButton: '!bg-white/10 !text-white',
                 },
               }}
             />

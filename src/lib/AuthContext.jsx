@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/supabase'
 import { toast } from 'sonner';
+import { stopPush } from '@/lib/push';
 
 const AuthContext = createContext(null);
 
@@ -126,7 +127,9 @@ export const AuthProvider = ({ children }) => {
     };
   }, [user?.id]);
 
-  const logout = (shouldRedirect = true) => {
+  const logout = async (shouldRedirect = true) => {
+    // Unlink this phone from the account first -- needs the session that signOut ends.
+    await stopPush();
     setUser(null);
     setIsAuthenticated(false);
     

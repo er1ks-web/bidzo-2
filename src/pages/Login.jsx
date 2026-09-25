@@ -82,6 +82,8 @@ export default function Login() {
           password,
           options: {
             emailRedirectTo: siteUrl('/auth/callback'),
+            // App sign-ups start with email notifications off (push instead); see supabase/push_notifications.sql.
+            data: { signup_source: isNativeApp ? 'app' : 'web' },
           },
         })
       : await supabase.auth.signInWithPassword({
