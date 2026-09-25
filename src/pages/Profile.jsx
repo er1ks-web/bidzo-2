@@ -19,6 +19,7 @@ import { ENABLE_WALLET } from '@/lib/featureFlags';
 import { getWalletState } from '@/lib/wallet';
 import { toast } from 'sonner';
 import { pageBackgroundStyle, pageBackgroundClassName } from '@/lib/pageBackground';
+import { stopPush } from '@/lib/push';
 
 export default function Profile() {
   const { t, lang } = useI18n();
@@ -551,6 +552,7 @@ export default function Profile() {
             variant="outline"
             size="sm"
             onClick={async () => {
+              await stopPush()
               const { error } = await supabase.auth.signOut()
               if (error) {
                 console.log(error)

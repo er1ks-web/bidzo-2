@@ -338,6 +338,9 @@ const translations = {
       listingFallback: 'Sludinājums',
       userFallback: 'Lietotājs',
     },
+    in_app_notification: {
+      now: 'tagad',
+    },
     account_deletion: {
       dangerZone: 'Konta dzēšana',
       settingsDesc: 'Neatgriezeniski dzēs savu Bidzo kontu un personas datus. Dzēšana notiek pēc 48 stundām — līdz tam to var atcelt.',
@@ -379,6 +382,14 @@ const translations = {
       pageContact: 'Jautājumi? Raksti uz info@bidzo.lv.',
     },
     settings_page: {
+      notificationsTitle: 'Paziņojumi',
+      channelEmailLabel: 'E-pasta paziņojumi',
+      channelEmailDesc: 'Saņem paziņojumus uz savu e-pastu',
+      channelPushLabel: 'Push paziņojumi',
+      channelPushDesc: 'Saņem paziņojumus šajā tālrunī',
+      pushBlocked: 'Paziņojumi šim tālrunim ir izslēgti. Atļauj tos, lai saņemtu push paziņojumus.',
+      pushAllow: 'Atļaut paziņojumus',
+      notificationTypes: 'Par ko paziņot',
       backToProfile: 'Atpakaļ uz profilu',
       title: 'Iestatījumi',
       subtitle: 'Pārvaldi, kā Bidzo izskatās un paziņo tev.',
@@ -1184,6 +1195,9 @@ const translations = {
       listingFallback: 'Listing',
       userFallback: 'User',
     },
+    in_app_notification: {
+      now: 'now',
+    },
     account_deletion: {
       dangerZone: 'Delete account',
       settingsDesc: 'Permanently delete your Bidzo account and personal data. Deletion happens after 48 hours — until then you can cancel it.',
@@ -1225,6 +1239,14 @@ const translations = {
       pageContact: 'Questions? Email info@bidzo.lv.',
     },
     settings_page: {
+      notificationsTitle: 'Notifications',
+      channelEmailLabel: 'Email notifications',
+      channelEmailDesc: 'Get notifications by email',
+      channelPushLabel: 'Push notifications',
+      channelPushDesc: 'Get notifications on this phone',
+      pushBlocked: 'Notifications are turned off for this phone. Allow them to receive push notifications.',
+      pushAllow: 'Allow notifications',
+      notificationTypes: 'What to notify me about',
       backToProfile: 'Back to profile',
       title: 'Settings',
       subtitle: 'Manage how Bidzo looks and notifies you.',
@@ -2030,6 +2052,9 @@ const translations = {
       listingFallback: 'Объявление',
       userFallback: 'Пользователь',
     },
+    in_app_notification: {
+      now: 'сейчас',
+    },
     account_deletion: {
       dangerZone: 'Удаление аккаунта',
       settingsDesc: 'Безвозвратно удалить аккаунт Bidzo и личные данные. Удаление происходит через 48 часов — до этого его можно отменить.',
@@ -2071,6 +2096,14 @@ const translations = {
       pageContact: 'Вопросы? Пишите на info@bidzo.lv.',
     },
     settings_page: {
+      notificationsTitle: 'Уведомления',
+      channelEmailLabel: 'Уведомления по e-mail',
+      channelEmailDesc: 'Получать уведомления на e-mail',
+      channelPushLabel: 'Push-уведомления',
+      channelPushDesc: 'Получать уведомления на этот телефон',
+      pushBlocked: 'Уведомления для этого телефона отключены. Разрешите их, чтобы получать push-уведомления.',
+      pushAllow: 'Разрешить уведомления',
+      notificationTypes: 'О чём уведомлять',
       backToProfile: 'Назад к профилю',
       title: 'Настройки',
       subtitle: 'Управляйте внешним видом и уведомлениями Bidzo.',

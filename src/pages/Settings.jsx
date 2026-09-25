@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Sun, Moon, Monitor, Check, Gavel, Trophy, Clock, MessageCircle, Package } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, Monitor, Check, Gavel, Trophy, Clock, MessageCircle, Package, Mail, BellRing } from 'lucide-react';
 import { useTheme } from '@/lib/ThemeContext.jsx';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
@@ -10,6 +10,8 @@ import { supabase } from '@/supabase';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import DeleteAccountCard from '@/components/profile/DeleteAccountCard';
+import { isNativeApp } from '@/lib/native';
+import { getPushPermission, requestPushPermission } from '@/lib/push';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -17,11 +19,28 @@ export default function Settings() {
   const { t } = useI18n();
   const [prefs, setPrefs] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [pushPermission, setPushPermission] = useState('unsupported');
+
+  useEffect(() => {
+    getPushPermission().then(setPushPermission);
+  }, []);
+
+  const handleAllowPush = async () => {
+    setPushPermission(await requestPushPermission());
+  };
 
   const APPEARANCE_OPTIONS = [
     { value: 'light', label: t('settings_page.themeLight'), description: t('settings_page.themeLightDesc'), icon: Sun },
     { value: 'dark', label: t('settings_page.themeDark'), description: t('settings_page.themeDarkDesc'), icon: Moon },
     { value: 'system', label: t('settings_page.themeSystem'), description: t('settings_page.themeSystemDesc'), icon: Monitor },
+  ];
+
+  // Master switches: which channel. The per-type switches below decide which notifications.
+  const CHANNEL_OPTIONS = [
+    { field: 'email_enabled', label: t('settings_page.channelEmailLabel'), description: t('settings_page.channelEmailDesc'), icon: Mail },
+    ...(isNativeApp
+      ? [{ field: 'push_enabled', label: t('settings_page.channelPushLabel'), description: t('settings_page.channelPushDesc'), icon: BellRing }]
+      : []),
   ];
 
   const NOTIFICATION_OPTIONS = [
@@ -39,7 +58,7 @@ export default function Settings() {
     (async () => {
       const { data, error } = await supabase
         .from('notification_prefs')
-        .select('outbid, auction_won, auction_ended, transaction_chat, new_message')
+        .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -89,7 +108,7 @@ export default function Settings() {
 
         <div className="bg-card rounded-xl border p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('settings_page.emailNotifications')}</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('settings_page.notificationsTitle')}</h2>
           </div>
 
           {loading ? (
@@ -100,6 +119,29 @@ export default function Settings() {
             </div>
           ) : (
             <div className="space-y-2">
+              {CHANNEL_OPTIONS.filter(({ field }) => prefs && field in prefs).map(({ field, label, description, icon: Icon }) => (
+                <div key={field} className="w-full flex items-center gap-4 p-4 rounded-lg border-2 border-accent/40 bg-accent/5">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-accent/15">
+                    <Icon className="w-5 h-5 text-accent" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{label}</p>
+                    <p className="text-xs text-muted-foreground">{description}</p>
+                  </div>
+                  <Switch checked={!!prefs?.[field]} onCheckedChange={() => handleToggle(field)} />
+                </div>
+              ))}
+              {isNativeApp && prefs?.push_enabled && pushPermission === 'denied' && (
+                <div className="p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground flex items-center justify-between gap-3">
+                  <span>{t('settings_page.pushBlocked')}</span>
+                  <button type="button" onClick={handleAllowPush} className="shrink-0 font-semibold text-accent">
+                    {t('settings_page.pushAllow')}
+                  </button>
+                </div>
+              )}
+              {prefs && 'email_enabled' in prefs && (
+                <p className="pt-3 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('settings_page.notificationTypes')}</p>
+              )}
               {NOTIFICATION_OPTIONS.map(({ field, label, description, icon: Icon }) => (
                 <div
                   key={field}

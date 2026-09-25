@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1034317043109",
+    "project_id": "bidzo-25cbd",
+    "storage_bucket": "bidzo-25cbd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1034317043109:android:9a9a127c3bbb379540c44c",
+        "android_client_info": {
+          "package_name": "com.bidzo.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAcSLnQQxi5R_yxr2yf_X6l5HDx4tzy6Kc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
