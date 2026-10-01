@@ -103,6 +103,8 @@ async function sendToToken(accessToken: string, token: string, title: string, bo
             priority: 'HIGH',
             notification: { channel_id: ANDROID_CHANNEL_ID, icon: ANDROID_ICON, color: BRAND_COLOR },
           },
+          // iPhones stay silent unless the notification asks for a sound.
+          apns: { payload: { aps: { sound: 'default' } } },
         },
       }),
     },

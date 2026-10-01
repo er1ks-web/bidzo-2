@@ -21,7 +21,7 @@ export default function ReportSuccessSheet({ isOpen, onClose }) {
           />
 
           <motion.div
-            className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-6 sm:pb-8"
+            className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-8"
             initial={{ y: 120, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 120, opacity: 0 }}
