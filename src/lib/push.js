@@ -1,11 +1,14 @@
+import { Capacitor } from '@capacitor/core'
 import { PushNotifications } from '@capacitor/push-notifications'
 import { toast } from 'sonner'
 import { supabase } from '@/supabase'
 import { isNativeApp } from '@/lib/native'
 
-// Push notifications in the Android app. The server side (queue -> Edge Function
+// Push notifications in the Android and iOS apps. The server side (queue -> Edge Function
 // send-push -> Firebase) is in supabase/push_notifications.sql and
-// supabase/functions/send-push. Requires android/app/google-services.json.
+// supabase/functions/send-push. Requires android/app/google-services.json and
+// ios/App/App/GoogleService-Info.plist; on iOS, AppDelegate.swift turns the Apple
+// token into a Firebase one so both platforms are sent to the same way.
 
 // Must match ANDROID_CHANNEL_ID in supabase/functions/send-push/index.ts.
 const CHANNEL_ID = 'bidzo_default'
@@ -40,14 +43,14 @@ async function addListeners() {
   PushNotifications.addListener('registration', ({ value }) => {
     currentToken = value
     supabase
-      .rpc('register_push_token', { p_token: value, p_platform: 'android' })
+      .rpc('register_push_token', { p_token: value, p_platform: Capacitor.getPlatform() })
       .then(({ error }) => { if (error) console.log(error) })
   })
 
   PushNotifications.addListener('registrationError', (e) => console.log('Push registration failed', e))
 
-  // Android doesn't show a system notification while the app is open, so show our own
-  // banner (or a toast if the banner isn't mounted).
+  // Neither Android nor iOS (no presentationOptions in capacitor.config.json) shows a system
+  // notification while the app is open, so show our own banner (or a toast if the banner isn't mounted).
   PushNotifications.addListener('pushNotificationReceived', (n) => {
     const notification = { title: n.title, body: n.body, link: n.data?.link || '' }
     if (foregroundListeners.size) {

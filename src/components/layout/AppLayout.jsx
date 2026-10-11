@@ -44,7 +44,7 @@ export default function AppLayout() {
       <NavBadgesProvider>
         <div className="min-h-screen bg-background flex flex-col">
           <AppTopBar />
-          <main className="flex-1 pb-20">
+          <main className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))]">
             <Outlet />
           </main>
           <BottomTabBar />

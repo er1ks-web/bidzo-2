@@ -6,11 +6,17 @@
     "backgroundColor": "#111111",
     "adjustMarginsForEdgeToEdge": "force"
   },
+  "ios": {
+    "backgroundColor": "#111111"
+  },
   "plugins": {
     "StatusBar": {
       "style": "DARK",
       "backgroundColor": "#111111",
       "overlaysWebView": false
+    },
+    "Keyboard": {
+      "resize": "native"
     }
   }
 }

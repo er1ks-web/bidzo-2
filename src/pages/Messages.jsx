@@ -675,7 +675,7 @@ export default function Messages() {
         <div className={cn(
           "flex-1 flex flex-col",
           isNativeApp
-            ? "fixed inset-x-0 top-14 bottom-0 z-50 bg-background rounded-none border-0"
+            ? "fixed inset-x-0 top-14 bottom-0 z-50 bg-background rounded-none border-0 pb-[env(safe-area-inset-bottom)]"
             : "fixed inset-x-0 top-[65px] bottom-0 z-40 bg-background rounded-none border-0",
           "sm:static sm:inset-auto sm:z-auto sm:bg-transparent sm:rounded-xl sm:border-0",
           isMobile

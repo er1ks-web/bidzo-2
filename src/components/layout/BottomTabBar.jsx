@@ -45,7 +45,7 @@ export default function BottomTabBar() {
   const isActive = (to) => (to === '/' ? location.pathname === '/' : location.pathname.startsWith(to));
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/60 select-none">
+    <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/60 select-none pb-[env(safe-area-inset-bottom)]">
       <div className="grid grid-cols-5 h-16">
         {tabs.map(({ to, label, icon: Icon, dot, primary }) => {
           const active = isActive(to);

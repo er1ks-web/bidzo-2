@@ -12,7 +12,8 @@ export const SITE_URL = 'https://www.bidzo.lv'
 
 // Where Google/Supabase send the user back to after signing in inside the app.
 // Must be listed under Supabase -> Authentication -> URL Configuration -> Redirect URLs,
-// and matches the intent-filter in android/app/src/main/AndroidManifest.xml.
+// and matches the intent-filter in android/app/src/main/AndroidManifest.xml and
+// CFBundleURLTypes in ios/App/App/Info.plist.
 export const NATIVE_AUTH_REDIRECT = 'com.bidzo.app://auth/callback'
 
 // Absolute URL for a path on the site: the current origin on the web, the public site in the app.
@@ -46,13 +47,13 @@ export function setStatusBarTheme(effectiveTheme) {
   StatusBar.setBackgroundColor({ color: light ? '#ffffff' : '#111111' }).catch(() => {})
 }
 
-// android/app/src/main/java/com/bidzo/app/LaunchScreenPlugin.java
+// android/app/src/main/java/com/bidzo/app/LaunchScreenPlugin.java, ios/App/App/LaunchScreenPlugin.swift
 const LaunchScreen = registerPlugin('LaunchScreen')
 
 let splashHidden = false
 
 // The launch screen stays up until the app has something to show, then plays
-// its exit animation (MainActivity.java) into the first page.
+// its exit animation (MainActivity.java / LaunchScreenView.swift) into the first page.
 export function hideSplash() {
   if (!isNativeApp || splashHidden) return
   splashHidden = true
@@ -63,6 +64,11 @@ export function hideSplash() {
 // No-op on the website.
 export function initNativeApp() {
   if (!isNativeApp) return
+
+  // iPhone: let the page reach the bottom edge so env(safe-area-inset-bottom) keeps the tab bar
+  // and bottom sheets clear of the home indicator. App only, so the website's layout is unchanged.
+  const viewport = document.querySelector('meta[name="viewport"]')
+  if (viewport && !viewport.content.includes('viewport-fit')) viewport.content += ', viewport-fit=cover'
 
   // Android hardware back button: go back in history, or exit on the first screen.
   App.addListener('backButton', ({ canGoBack }) => {
